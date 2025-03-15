@@ -21,7 +21,6 @@ class SulAmericaSoapService
         $user = 'yello1232user';
         $pass = md5('yello1232pass');
         $xml = '
-        <?xml version="1.0" encoding="UTF-8"?>
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:br.com.sulamerica.canalvenda.ws">
             <soapenv:Header>
                 <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss wssecuritysecext-1.0.xsd">
