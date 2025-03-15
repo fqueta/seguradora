@@ -19,10 +19,9 @@ class SulAmericaSoapService
     {
         // Criar o XML da requisição SOAP
         $user = 'yello1232user';
-        $pass = md5('yello1232pass');
-        $xml = '
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:br.com.sulamerica.canalvenda.ws">
-            <soapenv:Header>
+        // $pass = md5('yello1232pass');
+        $pass = 'yello1232pass';
+        $Security = '
                 <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss wssecuritysecext-1.0.xsd">
                     <wsse:UsernameToken>
                         <wsse:Username>'.$user.'</wsse:Username>
@@ -31,6 +30,19 @@ class SulAmericaSoapService
                         </wsse:Password>
                     </wsse:UsernameToken>
                 </wsse:Security>
+        ';
+        $Security = '
+                <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/07/secext" soapenv:mustUnderstand="1">
+                    <wsse:UsernameToken>
+                        <wsse:Username>'.$user.'</wsse:Username>
+                        <wsse:Password>'.$pass.'</wsse:Password>
+                    </wsse:UsernameToken>
+                </wsse:Security>
+        ';
+        $xml = '
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:br.com.sulamerica.canalvenda.ws">
+            <soapenv:Header>
+                '.$Security.'
             </soapenv:Header>
             <soapenv:Body>
                 <urn:contratarSeguro>
