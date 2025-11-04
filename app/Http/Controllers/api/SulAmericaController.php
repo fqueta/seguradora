@@ -152,10 +152,16 @@ class SulAmericaController extends Controller
      * @uso (new sulAmericaController)->cancelamento($config);
      */
     public function cancelamento($config){
-        $numeroOperacao = isset($config['numeroOperacao']) ? $config['numeroOperacao'] : '740434';
+        $numeroOperacao = isset($config['numeroOperacao']) ? $config['numeroOperacao'] : false;
         $canalVenda = isset($config['canalVenda']) ? $config['canalVenda'] : 'site';
         $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : '032025';
         $token_contrato = isset($config['token_contrato']) ? $config['token_contrato'] : '';
+        if(!$numeroOperacao){
+            $ret['exec'] = false;
+            $ret['mens'] = 'Número de operação é obrigatório';
+            return $ret;
+        }
+        // dd($config);
         $xml = '
         <soapenv:Envelope
             xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"

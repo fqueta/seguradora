@@ -228,6 +228,7 @@ class ClienteController extends Controller
             $displayPf = '';
             $displayPj = 'd-none';
         }
+        // dd($dados);
         // $hidden_editor = '';
         $info_obs = '<div class="alert alert-info alert-dismissable" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true">×</button><i class="fa fa-info-circle"></i>&nbsp;<span class="sw_lato_black">Obs</span>: campos com asterisco (<i class="swfa fas fa-asterisk cad_asterisco" aria-hidden="true"></i>) são obrigatórios.</div>';
         if(isset($dados['id']) && ($id_cliente=$dados['id'])){
@@ -735,8 +736,8 @@ class ClienteController extends Controller
         $dados = User::where('id',$id)->get();
         $routa = 'users';
         $this->authorize('ler', $this->url);
-
-        if(!empty($dados)){
+        //Verificar se foi encontrado o usuário
+        if( $dados && count($dados) > 0){
             $title = 'Editar Cadastro de users';
             $titulo = $title;
             $dados[0]['ac'] = 'alt';

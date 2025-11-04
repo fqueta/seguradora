@@ -397,6 +397,7 @@ class ClientesController extends Controller
                     // ]);
                 }
             }
+            $ret['status_req_cancelado'] = Qlib::update_usermeta($id,'status_req_cancelado',json_encode($ret));
         }else{
             $ret['exec'] = false;
             $ret['status'] = 400;

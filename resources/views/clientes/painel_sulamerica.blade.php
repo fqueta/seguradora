@@ -5,7 +5,15 @@
     $status_contrato = isset($dados['status_contrato']) ? $dados['status_contrato'] : false;
     $id = isset($dados['dados']['id']) ? $dados['dados']['id'] : false;
     $token = isset($dados['dados']['token']) ? $dados['dados']['token'] : false;
-    // dd($dados);
+    // dd($dados['dados']['config[status_contrato]']);
+    $status_local = false;
+    if(!$status_contrato && isset($dados['dados']['config[status_contrato]'])){
+        // $status_contrato = $dados['dados']['config[status_contrato]'];
+        $status_local = $dados['dados']['config[status_contrato]'];
+
+        // $status_contrato = 'Aprovado';
+    }
+    // dd($status_contrato,$status_local,$dados['dados']['config[status_contrato]']);
 @endphp
 {{-- @if ($ac=='alt') --}}
 <div class="row mb-4 ml-0 mr-0 ">
@@ -20,6 +28,17 @@
 
             <div class="col-md-12 text-right">
                 <button title="{{__('Reativar cadastro')}}" onclick="reativar_cadastro('{{$token}}','{{ URL::full() }}')" type="button" class="btn btn-outline-secondary ml-1"><i class="fa fa-recycle"></i> {{ __('Reativar sulamerica') }}</button>
+            </div>
+
+        @endif
+    @elseif($status_local == 'Aprovado' || $status_local == 'aprovado')
+        @if ($dados)
+
+            <div class="col-md-12 text-right">
+                <span class="badge badge-danger">{{ __('Sem stataus sulamerica') }}</span>
+                <button type="button" title="{{__('Cantelar o contrato localmente')}}" data-operacao="{{$numOperacao}}" onclick="cancelarSulamerica('{{$token}}','{{$id}}',this)" class="btn btn-outline-danger">
+                   <i class="fa fa-ban"></i> {{__('Cancelar localmente')}}
+                </button>
             </div>
 
         @endif
