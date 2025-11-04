@@ -5,7 +5,9 @@
     $status_contrato = isset($dados['status_contrato']) ? $dados['status_contrato'] : false;
     $id = isset($dados['dados']['id']) ? $dados['dados']['id'] : false;
     $token = isset($dados['dados']['token']) ? $dados['dados']['token'] : false;
-    // dd($dados['dados']['config[status_contrato]']);
+    // dd($dados);
+    $processo_cancelamento = $dados['dados']['processo_cancelamento'] ?? [];
+    // dd($processo_cancelamento);
     $status_local = false;
     if(!$status_contrato && isset($dados['dados']['config[status_contrato]'])){
         // $status_contrato = $dados['dados']['config[status_contrato]'];
@@ -35,12 +37,29 @@
         @if ($dados)
 
             <div class="col-md-12 text-right">
-                <span class="badge badge-danger">{{ __('Sem stataus sulamerica') }}</span>
-                <button type="button" title="{{__('Cantelar o contrato localmente')}}" data-operacao="{{$numOperacao}}" onclick="cancelarSulamerica('{{$token}}','{{$id}}',this)" class="btn btn-outline-danger">
+                <span class="badge badge-danger">{{ __('Sem status sulamerica') }}</span>
+                {{-- <button type="button" title="{{__('Cantelar o contrato localmente')}}" data-operacao="{{$numOperacao}}" onclick="cancelarSulamerica('{{$token}}','{{$id}}',this)" class="btn btn-outline-danger">
                    <i class="fa fa-ban"></i> {{__('Cancelar localmente')}}
-                </button>
+                </button> --}}
             </div>
 
         @endif
+    @endif
+</div>
+<div class="row mb-4 ml-0 mr-0 ">
+    @if (isset($processo_cancelamento['data_cancelamento']))
+        <div class="col-md-12 text-right">
+            <h4 class="text-center bg-secondary">{{ __('Processo de cancelamento (Acompanhamento Local)') }}</h4><hr>
+            <table class="table table-striped table-sm">
+                <tr>
+                    <th>{{ __('Data do cancelamento') }}</th>
+                    <td>{{ $processo_cancelamento['data_cancelamento'] }}</td>
+                </tr>
+                <tr>
+                    <th>{{ __('Canceldo Por') }}</th>
+                    <td>{{ $processo_cancelamento['cancelado_por_nome'] }}</td>
+                </tr>
+            </table>
+        </div>
     @endif
 </div>

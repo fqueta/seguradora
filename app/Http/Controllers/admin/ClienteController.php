@@ -4,6 +4,7 @@ namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\admin\ContratoController;
+use App\Http\Controllers\api\ClientesController;
 use App\Http\Requests\StoreClientesRequest;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdateClientesRequest;
@@ -197,7 +198,15 @@ class ClienteController extends Controller
     //     }
     // }
     public function campos($dados=false,$local='index'){
+        // Campos: configuração e correções para manipulação segura de dados
+        // Corrige erro de modificação indireta em modelos Eloquent normalizando $dados.
         $autor_id = Auth::id();
+        // Normaliza $dados para evitar modificações indiretas em modelos Eloquent
+        if (is_object($dados) && method_exists($dados, 'toArray')) {
+            $dados = $dados->toArray();
+        } elseif ($dados instanceof \Illuminate\Support\Collection) {
+            $dados = $dados->toArray();
+        }
         // $permission = new admin\UserPermissions($user);
         $status = false;
         if(isset($dados['tipo_pessoa']) && $dados['tipo_pessoa'] && !isset($_GET['tipo'])){
@@ -233,6 +242,7 @@ class ClienteController extends Controller
         $info_obs = '<div class="alert alert-info alert-dismissable" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true">×</button><i class="fa fa-info-circle"></i>&nbsp;<span class="sw_lato_black">Obs</span>: campos com asterisco (<i class="swfa fas fa-asterisk cad_asterisco" aria-hidden="true"></i>) são obrigatórios.</div>';
         if(isset($dados['id']) && ($id_cliente=$dados['id'])){
             $status = $this->get_status_contrato($id_cliente);
+            // dd($status);
             if($status == 'Reativando'){
                 $alerta_processo_reativacao = Qlib::qoption('alerta_processo_reativacao') ? Qlib::qoption('alerta_processo_reativacao') : '';
                 if($alerta_processo_reativacao){
@@ -240,6 +250,19 @@ class ClienteController extends Controller
                 }
                 $info_obs .= '<div class="alert alert-warning alert-dismissable" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true">×</button>'.$alerta_processo_reativacao.'</div>';
 
+            }elseif ($status == 'Cancelado') {
+                // adicionar o resultado do processamento do cancelamento
+                $procCancelRaw = Qlib::get_usermeta($id_cliente,'status_req_cancelado',true);
+                $procCancel = json_decode($procCancelRaw, true) ?: [];
+                if (isset($procCancel['data_cancelamento'])) {
+                    $procCancel['data_cancelamento'] = Qlib::dataExibe($procCancel['data_cancelamento']);
+                }
+                // importar o nome do usuario que cancelou pelo campos cancelado_por
+                if(isset($procCancel['cancelado_por'])){
+                    $procCancel['cancelado_por_nome'] = Qlib::buscaValorDb0('users','id',$procCancel['cancelado_por'],'name');
+                }
+                $dados['processo_cancelamento'] = $procCancel;
+                // dd($dados);
             }
         }
         $id_produto_padrao = Qlib::qoption('produtoParceiro') ? Qlib::qoption('produtoParceiro') : '10232'; //unico produto padrão que pode ser contratado pela sulameriaca
@@ -286,26 +309,6 @@ class ClienteController extends Controller
                 // 'class'=>'select2',
                 'class_div'=>'div-pf '.$displayPf,
             ],
-            // 'config[escolaridade]'=>[
-            //     'label'=>'Escolaridade',
-            //     'active'=>false,
-            //     'type'=>'select',
-            //     'arr_opc'=>Qlib::lib_escolaridades(),'exibe_busca'=>'d-block',
-            //     'event'=>'',
-            //     'tam'=>'6',
-            //     'class'=>'select2',
-            //     'cp_busca'=>'config][escolaridade','class_div'=>'div-pf '.$displayPf,
-            // ],
-            // 'config[profissao]'=>[
-            //     'label'=>'Profissão',
-            //     'active'=>false,
-            //     'type'=>'select',
-            //     'arr_opc'=>Qlib::lib_profissao(),'exibe_busca'=>'d-block',
-            //     'event'=>'',
-            //     'tam'=>'6',
-            //     'class'=>'select2',
-            //     'cp_busca'=>'config][profissao','class_div'=>'div-pf '.$displayPf,
-            // ],
             'config[tipo_pj]'=>[
                 'label'=>'Tipo de Pessoa Jurídica',
                 'active'=>false,
@@ -333,20 +336,32 @@ class ClienteController extends Controller
             'config[numCertificado]'=>['label'=>'C.','active'=>false,'type'=>'hidden_text','tam'=>'2','exibe_busca'=>'d-block','event'=>'','cp_busca'=>'config][numCertificado','class_div'=>''],
             'config[numOperacao]'=>['label'=>'N.°','active'=>false,'type'=>'hidden_text','tam'=>'2','exibe_busca'=>'d-block','event'=>'','cp_busca'=>'config][numOperacao','class_div'=>''],
             'config[status_contrato]'=>['label'=>'Status','active'=>true,'type'=>'hidden_text','tam'=>'2','exibe_busca'=>'d-block','event'=>'required','cp_busca'=>'config][status_contrato','class_div'=>''],
-
             'painelsulamerica'=>['label'=>'Peinel','active'=>false,'type'=>'html','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'clientes.painel_sulamerica','dados'=>[
                 'dados'=>$dados,
                 'ac'=>$ac,
             ],'script_show'=>'clientes.painel_sulamerica'],
+            // 'info_local'=>['label'=>'local','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-center bg-secondary">'.__('Acompanhamento Local').'</h4><hr>','script_show'=>'<h4 class="text-center">'.__('Contrato').'</h4><hr>'],
+            // 'painelacompanhamento_local'=>['label'=>'Peinel','active'=>false,'type'=>'html','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'clientes.painel_sulamerica','dados'=>[
+            //     'dados'=>$dados,
+            //     'ac'=>$ac,
+            // ],'script_show'=>'clientes.painelacompanhamento_local'],
             'preferencias_label' =>['label'=>'Preferencias','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'','script_show'=>''],
             'ativo'=>['label'=>'Ativar contrato','js'=>false,'tab'=>$this->tab,'active'=>false,'type'=>'hidden','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
             // 'preferencias[newslatter]'=>['label'=>'Deseja receber e-mails com as novidades','active'=>false,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-none','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não'],'cp_busca'=>'preferencias][newslatter'],
         ];
+        // dd($ret);
         if(Qlib::isAdmin(2)){
             // $ret['preferencias_label'] = ['label'=>'Preferencias','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-center">'.__('Preferências').'</h4><hr>','script_show'=>'<h4 class="text-center">'.__('Preferências').'</h4><hr>'];
             // $ret['ativo'] = ['label'=>'Visualizar cadastro','js'=>true,'tab'=>$this->tab,'active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']];
             if($local=='edit'){
-                if($status!='Aprovado' && $status!='Cancelado'){
+                $contrato_sulamerica = $this->get_contrato_sulamerica($id_cliente);
+                //se não tiver o contrato na sulamerica e o status estiver aprovado libera o select para o adminstrador manipular o status localmente.
+                if(!$contrato_sulamerica && $status=='Aprovado'){
+                    $ret['config[status_contrato]']['type'] = 'select';
+                    $ret['config[status_contrato]']['arr_opc'] = Qlib::sql_array("SELECT value,nome FROM tags WHERE ativo='s' AND pai ='status_contratos'",'nome','value');
+                    $ret['config[status_contrato]']['option_select'] = true;
+                    $ret['config[status_contrato]']['event'] = '';
+                }elseif($status!='Aprovado' && $status!='Cancelado'){
                     // $status_contrato = $this->get_status_contrato($id_cliente);
                     $ret['config[status_contrato]']['type'] = 'select';
                     $ret['config[status_contrato]']['arr_opc'] = Qlib::sql_array("SELECT value,nome FROM tags WHERE ativo='s' AND pai ='status_contratos'",'nome','value');
@@ -659,6 +674,17 @@ class ClienteController extends Controller
             return redirect()->route($route,$ret);
         }
     }
+    public function cancelar_contrato($id_cliente=false,$status_contrato='',$autor=false){
+        // dd($id_cliente);
+        if(!$id_cliente){
+            return ['exec'=>false,'mens'=>'Cliente não informado inválido','color'=>'danger'];
+        }
+        if(!$status_contrato){
+            return ['exec'=>false,'mens'=>'Status do contrato inválido','color'=>'danger'];
+        }
+        $ret = (new ClientesController)->cancelar_contrato($id_cliente);
+        return $ret;
+    }
     /**
      * MEtodo para salver os contratos atraves dos dados de formularo de cadastro do cliente
      * @param string $id_cliente
@@ -700,12 +726,30 @@ class ClienteController extends Controller
         }
         $ret = Qlib::update_tab('contratos',$dsalv,"WHERE id_cliente='$id_cliente' AND id_produto='$id_produto'",true);
         if(isset($ret['exec'])){
+            //verificar qual é o status no cadastro do cliente na tabela de users e se for = 'Cancelado' registra data so cancelamento no meta campo usermeta['status_contrato']
+            $config_cliente = Qlib::buscaValorDb0('users','id',$id_cliente,'config');
+            $config_cliente = json_decode($config_cliente,true) ? Qlib::lib_json_array($config_cliente) : [];
+            // dd($config_cliente);
+            $get_status = $config_cliente['status_contrato'];
+            if($get_status=='Cancelado'){
+                $cancelar = $this->cancelar_contrato($id_cliente,$get_status,$autor);
+                // $ret['update_data_cancelamento'] = Qlib::usermeta_update($id_cliente,'update_data_cancelamento',$get_status);
+                // $dc = [
+                //     'data_cancelamento'=>date('Y-m-d H:i:s'),
+                //     'cancelado_por'=>$autor,
+                // ];
+                // $ret['update_data_cancelamento'] = Qlib::update_usermeta($id_cliente,'data_cancelamento',json_encode($dc));
+                return $ret;
+            }
+
+            $get_status = $this->get_status_contrato($id_cliente);
             // $token_contrato = isset($ret['dados']['token']) ? $ret['dados']['token'] : false;
             $token_contrato = $this->get_token_by_id(@$ret['idCad']);
             //aprveita para integração com a sulaverica
             if($token_contrato){
                 // $ret['sulamerica'] = (new ContratoController)->sulamerica_contratar($token_contrato);
                 $sulamerica_contratar = (new ContratoController)->sulamerica_contratar($token_contrato);
+                $get_status = $this->get_status_contrato($id_cliente);
                 if(isset($sulamerica_contratar['exec'])){
                     //é por que teve interação com a API de integração nesse caso deve retornar o status da api
                     $ret = $sulamerica_contratar;
@@ -974,6 +1018,7 @@ class ClienteController extends Controller
         // dd($data,$id);
         // return $id;
         if(!empty($data)){
+            // dd($data);
             $atualizar=User::where('id',$id)->update($data);
             $route = $this->routa.'.index';
             $ret = [
@@ -984,6 +1029,14 @@ class ClienteController extends Controller
                 'idCad'=>$id,
                 'return'=>$route,
             ];
+            // $get_status = $this->get_status_contrato($id);
+            // //se o status que está sendo salvo agora for = 'Cancelado' registra data so cancelamento no meta campo usermeta['status_contrato']
+            // dd($get_status);
+            // if($get_status=='Cancelado'){
+            //     $data['config']['status_contrato'] = $get_status;
+            //     $data['config']['data_cancelamento'] = date('Y-m-d H:i:s');
+            // }
+
             //Adicionar um contrato caso o cliente foi salvo com sucesso
             if($ret['idCad'] && ($id_cliente = $ret['idCad'])){
                 $ret = $this->store_contratos($id_cliente,$dados_config,'alt');

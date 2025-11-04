@@ -374,12 +374,30 @@ class ClientesController extends Controller
         $ret['exec'] = false;
         $ret['status'] = 400;
         $ret['mens'] = 'Erro ao tentar excluir';
-        // dump($user_id);
+        if(!$user_id){
+            $ret['exec'] = false;
+            $ret['status'] = 400;
+            $ret['mens'] = 'Erro ao tentar excluir';
+            return $ret;
+        }
+        //Verifica se o usuario tem permissão de asministrador
+        $is_admin = Qlib::isAdmin(2);
+        // dd($is_admin);
+        //ser for administrador não precisa verificar se é o dono ele vira o dono de todos
+        if($is_admin && (!$is_owner || $is_owner==0)){
+            // $ret['exec'] = true;
+            // $ret['status'] = 200;
+            // $ret['mens'] = 'Contrato cancelado com sucesso';
+            // return $ret;
+            $is_owner = true;
+        }
+        //essa função somente se aplica se ele não for admistrador caso seja não precisa verificar se ele é o dono
         if($is_owner){
             //Verifica qual é o numero de operação
             $numOperacao = (new ClienteController())->get_numero_operacao($id);
+            $token_contrato = Qlib::buscaValorDb0('contratos','id_cliente',$id,'token');
+            $cc = new ContratoController;
             if($numOperacao){
-                $cc = new ContratoController;
                 $ret = $cc->cancelar($numOperacao);
                 if(isset($ret['exec'])){
                     unset(
@@ -389,14 +407,27 @@ class ClientesController extends Controller
                         $ret['color'],
                     );
                     $ret['status'] = 200;
-                    $token_contrato = Qlib::buscaValorDb0('contratos','id_cliente',$id,'token');
                     $up_status = $cc->status_update($token_contrato,'Cancelado');
                     $ret['up_status'] = $up_status;
                     // $ret = Qlib::json_update_tab('users','id',$id,'config',[
                     //     'status_contrato'=>'Cancelado',
                     // ]);
                 }
+            }else{
+                //mesmo sem numero de operação se o usuario selecionou opção de cancelar o sistema local permite calncelar
+                $ret = $cc->status_update($token_contrato,'Cancelado');
+                $mens = $ret['mens']??'';
+                $mens .= ', Mais sem registro de contrato na Sulamerica';
+                $ret['mens'] = $mens;
+                // dd($ret);
+                // $ret['exec'] = false;
+                // $ret['status'] = 400;
+                // $ret['mens'] = 'Erro ao tentar excluir';
             }
+            //coleta data de cancelamento e id do usuario que cancelou
+            $ret['cancelado_por'] = $user_id;
+            $ret['data_cancelamento'] = date('Y-m-d H:i:s');
+            $ret['color'] = 'warning';
             $ret['status_req_cancelado'] = Qlib::update_usermeta($id,'status_req_cancelado',json_encode($ret));
         }else{
             $ret['exec'] = false;
@@ -404,6 +435,7 @@ class ClientesController extends Controller
             $ret['mens'] = 'Registro não encontrado';
             // $ret['data'] = $d;
         }
+        // dd($ret);
         return $ret;
     }
 }
