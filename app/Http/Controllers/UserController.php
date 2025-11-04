@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\admin\EventController;
-use App\Http\Controllers\admin\QuickCadController;
-use Illuminate\Support\Facades\Auth;
 use App\Models\_upload;
-use App\Models\Post;
 use App\Models\User;
 use stdClass;
 use App\Qlib\Qlib;
 use App\Rules\FullName;
 use App\Rules\RightCpf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Gate;
-use App\Notifications\notificaNewUser;
-use App\Rules\RightCnpj;
-use Illuminate\Support\Facades\Notification;
-use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use DataTables;
 
 class UserController extends Controller
 {
@@ -27,38 +24,40 @@ class UserController extends Controller
     public $routa;
     public $label;
     public $view;
+    public $url;
     public $tab;
-
-    public $access_token;
-	public $url_plataforma;
-	public $url;
-	public $tk_conta;
-	public $seg1;
-
-    public function __construct()
+    public $id_permission;
+    public $title;
+    public function __construct($config=[])
     {
+        $this->middleware('auth');
         $user = Auth::user();
-        // $this->middleware('auth');
+        $routeName = isset($config['route']) ? $config['route'] : false;
+        $sec2 = request()->segment(2);
+        $routeName = $routeName ? $routeName : $sec2;
         $this->user = $user;
-        if(Qlib::is_backend()){
-            $this->routa = 'users';
-        }else{
-            $this->routa = 'users_site';
-        }
+        $this->routa = $routeName;
+        $this->url = 'users';
         $this->label = 'Usuários';
         $this->view = 'padrao';
         $this->tab = 'users';
-        $this->credenciais();
-        $this->seg1 = request()->segment(1);
-        //$seg2 = request()->segment(2);
+        $this->title = __('Cadastro de usuário');
+        if($routeName == 'fornecedores'){
+            $this->title = __('Cadastro de fornecedores');
+        }
     }
-    public function credenciais(){
-		$this->access_token = 'NWM5OGMyZGRiOTAzMS41ZmQwZGQyNTUzZGI0LjQx';
-		$this->url 		 	= 'https://api.ctloja.com.br/v1';
-		$this->tk_conta	 	= '624384509209d';
-		//$this->tk_conta	 	= '60b77bc73e7c0';
-	}
-
+    /**gera um id de pemissão automatico para o caso de clientes */
+    public function id_permission_clientes(){
+        return Qlib::qoption('id_permission_clientes');
+    }
+    /**gera um id de pemissão automatico para o caso de fornecedores */
+    public function id_permission_fornecedores(){
+        return Qlib::qoption('id_permission_fornecedores');
+    }
+    /**gera um id de pemissão automatico para o caso de parceiros */
+    public function partner_permission_id(){
+        return Qlib::qoption('partner_permission_id');
+    }
     public function queryUsers($get=false,$config=false)
     {
         $ret = false;
@@ -69,7 +68,6 @@ class UserController extends Controller
             'limit'=>isset($get['limit']) ? $get['limit']: 50,
             'order'=>isset($get['order']) ? $get['order']: 'desc',
         ];
-        $campos = $this->campos();
         $logado = Auth::user();
         if(isset($get['term'])){
             //Autocomplete
@@ -88,20 +86,18 @@ class UserController extends Controller
             }
             $user = DB::select($sql);
             $ret['user'] = $user;
-            $ret['campos'] = $campos;
-            $ret['user_totais'] = @count($user);
-            $ret['titulo_tabela'] = 'Clientes';
             return $ret;
         }else{
             if($this->routa == 'fornecedores'){
                 $user =  User::where('id_permission','=',Qlib::qoption('id_permission_fornecedores'))->orderBy('id',$config['order']);
             }else{
-                $user =  User::where('id_permission','>=',$logado->id_permission)->orderBy('id',$config['order']);
+                // $id_permission_clientes = Qlib::qoption('id_permission_clientes');
+                $user =  User::where('id_permission','>=',$logado->id_permission)->where('id_permission','!=',$this->id_permission_clientes())->orderBy('id',$config['order']);
             }
             //$user =  DB::table('users')->where('ativo','s')->orderBy('id',$config['order']);
         }
         $users = new stdClass;
-
+        $campos = isset($_SESSION['campos_users_exibe']) ? $_SESSION['campos_users_exibe'] : $this->campos();
         $tituloTabela = 'Lista de todos cadastros';
         $arr_titulo = false;
         if(isset($get['filter'])){
@@ -160,244 +156,13 @@ class UserController extends Controller
         return $ret;
     }
     public function campos($dados=false,$local='index'){
-        $logado = Auth::check();
-        if($logado){
-            $user = Auth::user();
-            $permission = new admin\UserPermissions($user);
-            $campos_permissions = $permission->campos();
-            $arr_opc = Qlib::sql_array("SELECT id,name FROM permissions WHERE active='s' AND id >='".$user->id_permission."'",'name','id');
-        }else{
-            $campos_permissions = false;
-            $user = false;
-            $arr_opc = [];
-        }
-        if(Qlib::is_backend()){
-            $origem = 'admin';
-        }else{
-            $origem = 'site';
-        }
-        if(isset($dados['tipo_pessoa']) && $dados['tipo_pessoa']){
+        $user = Auth::user();
+        $permission = new admin\UserPermissions($user);
+        if(isset($dados['tipo_pessoa']) && $dados['tipo_pessoa'] && !isset($_GET['tipo'])){
             $_GET['tipo'] = $dados['tipo_pessoa'];
         }
-        if(Qlib::is_backend()){
-            $sec = isset($_GET['tipo'])?$_GET['tipo']:'pf';
-        }else{
-            $sec=request()->segment(3);
-        }
-        if($sec=='pf'){
-            $lab_nome = 'Nome completo *';
-            $lab_cpf = 'CPF *';
-            $displayPf = '';
-            $displayPj = 'd-none';
-            $larg_email = 6;
-        }elseif($sec=='pj'){
-            $lab_nome = 'Nome do responsável *';
-            $lab_cpf = 'CPF do responsável*';
-            $displayPf = 'd-none';
-            $displayPj = '';
-            $larg_email = 9;
-        }else{
-            $lab_nome = 'Nome completo *';
-            $lab_cpf = 'CPF *';
-            $larg_email = 6;
-            $displayPf = '';
-            $displayPj = 'd-none';
-        }
-        $telddi = $this->ger_select_ddi([
-            'label' => 'Celular',
-            'dados' => $dados,
-        ]);
-        $ddi = isset($dados['config']['ddi']) ? $dados['config']['ddi'] : '';
-        $telefonezap = isset($dados['config']['telefonezap']) ? $dados['config']['telefonezap'] : '';
-
-        $telddi_show = '<div class="col-12"><label>Celular:</label> '.$ddi.''.$telefonezap.'</div>';
-
-        $ret = [
-            'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
-            'sep0'=>['label'=>'informações','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h6 class="text-left pt-2">'.__('Informe os dados').'</h6><hr class="mt-0">','script_show'=>''],
-            'tipo_pessoa'=>[
-                'label'=>'Pessoa*',
-                'active'=>true,
-                'type'=>'select',
-                'arr_opc'=>['pf'=>'Pessoa Física','pj'=>'Pessoa Jurídica'],'exibe_busca'=>'d-block',
-                'event'=>'onchange=selectTipoUser(this.value)',
-                'tam'=>'12',
-            ],
-            'name'=>['label'=>$lab_nome,'active'=>true,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'required','tam'=>'12'],
-            // 'nome'=>['label'=>$lab_nome,'active'=>true,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'9','placeholder'=>''],
-            // 'cpf'=>['label'=>$lab_cpf,'active'=>false,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cpf','tam'=>'3'],
-            'cpf'=>['label'=>$lab_cpf,'active'=>false,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cpf required','tam'=>'3','value'=>@$_GET['cpf']],
-            'cnpj'=>['label'=>'CNPJ *','active'=>false,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cnpj required','tam'=>'3','class_div'=>'div-pj '.$displayPj],
-            'razao'=>['label'=>'Razão social *','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'3','placeholder'=>'','class_div'=>'div-pj '.$displayPj],
-            'config[nome_fantasia]'=>['label'=>'Nome fantasia','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'3','placeholder'=>'','class_div'=>'div-pj '.$displayPj,'cp_busca'=>'config][nome_fantasia'],
-            'config[CodigoCiac]'=>['label'=>'CIAC','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'2','placeholder'=>'','class_div'=>'div-pj '.$displayPj,'cp_busca'=>'config][CodigoCiac'],
-            'token'=>['label'=>'token','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
-            'telddi'=>['label'=>'Telefone com ddi','active'=>false,'tam'=>'9','script'=>$telddi,'script_show'=>$telddi_show,'type'=>'html_script','class_div'=>''],
-            'config[Telefone]'=>['label'=>'Telefone','active'=>true,'type'=>'tel','tam'=>'3','exibe_busca'=>'d-block','event'=>' onblur=mask(this,clientes_mascaraTelefone); onkeypress=mask(this,clientes_mascaraTelefone);','cp_busca'=>'config][Telefone'],
-            'email'=>['label'=>'Email','active'=>true,'type'=>'email','exibe_busca'=>'d-block','event'=>'required','tam'=>$larg_email],
-            'password'=>['label'=>'Senha','active'=>false,'type'=>'password','exibe_busca'=>'d-none','event'=>'','tam'=>'3'],
-            'sep1'=>['label'=>'Documento','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h6 class="text-left pt-2">'.__('Documentos').'</h6><hr class="mt-0">','script_show'=>''],
-            'sep1'=>['label'=>'Endereço','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h6 class="text-left pt-2">'.__('Configurações').'</h6><hr class="mt-0">','script_show'=>''],
-            'config[cep]'=>['label'=>'CEP','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'mask-cep onchange=buscaCep1_0(this.value)','tam'=>'3','cp_busca'=>'config][cep'],
-            'config[endereco]'=>['label'=>'Endereço','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'endereco=cep','tam'=>'7','cp_busca'=>'config][endereco'],
-            'config[numero]'=>['label'=>'Numero','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'numero=cep','tam'=>'2','cp_busca'=>'config][numero'],
-            'config[complemento]'=>['label'=>'Complemento','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'3','cp_busca'=>'config][complemento'],
-            'config[bairro]'=>['label'=>'Bairro','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'bairro=cep','tam'=>'3','cp_busca'=>'config][bairro'],
-            'config[cidade]'=>['label'=>'Cidade','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'cidade=cep','tam'=>'4','cp_busca'=>'config][cidade'],
-            'config[uf]'=>['label'=>'UF','active'=>false,'js'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'2','cp_busca'=>'config][uf'],
-            'sep2c'=>['label'=>'Documento','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h6 class="text-left pt-2">'.__('Configurações').'</h6><hr class="mt-0">','script_show'=>''],
-            'id_permission'=>[
-                'label'=>'Permissão*',
-                'active'=>true,
-                'type'=>'select',
-                'data_selector'=>[
-                    'campos'=>$campos_permissions,
-                    'route_index'=>route('permissions.index'),
-                    'id_form'=>'frm-permission',
-                    'action'=>route('permissions.store'),
-                    'campo_id'=>'id',
-                    'campo_bus'=>'nome',
-                    'label'=>'Permissão',
-                ],'arr_opc'=>$arr_opc,'exibe_busca'=>'d-block',
-                'event'=>'',
-                'tam'=>'12',
-            ],'ativo'=>['label'=>'Liberar acesso','active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
-            'config[origem]'=>['label'=>'origem','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2','cp_busca'=>'config][origem','value'=>$origem],
-        ];
-        if(!$logado){
-            unset($ret['id_permission']);
-        }
-        if($origem=='admin'){
-            //Adicionar input hidden para o quick cadastro
-            if(isset($_GET['quick_cad'])){
-                $ret['quick_cad'] = ['label'=>'quick cad','active'=>false,'type'=>'hidden','value'=>$_GET['quick_cad'],'exibe_busca'=>'d-block','event'=>'','tam'=>'2'];
-            }
-            $ret['sep3']=[
-                'label'=>'Termos',
-                'active'=>false,
-                'type'=>'html_script',
-                'exibe_busca'=>'d-none','event'=>'','tam'=>'12','script_show'=>'<h6 class="text-left pt-2">'.__('Termos').'</h6><hr class="mt-0">',
-                'script_'=>''
-            ];
-            if($termo=$this->aceito_termo(@$dados['id'],'html')){
-                $ret['ttermo']=[
-                    'label'=>'Termos',
-                    'active'=>false,
-                    'type'=>'html_script',
-                    'exibe_busca'=>'d-none','event'=>'','tam'=>'12','script_'=>'<p class="pt-2 mb-3">'.$termo.'</p>','script_show'=>'<p class="mb-3">'.$termo.'</p>'
-                ];
-                unset($ret['meta[termo]']);
-            }else{
-                $ret['ttermo']=[
-                    'label'=>'Termos',
-                    'active'=>false,
-                    'type'=>'html_script',
-                    'exibe_busca'=>'d-none','event'=>'','tam'=>'12','script_'=>'<p class="pt-2 mb-3 text-danger">Usuário ainda não concordou com os temos.</p>',
-                    'script_show'=>'<p class="pt-2 mb-3 text-danger">Usuário ainda não concordou com os temos.</p>'
-                ];
-            }
-            if(isset($dados['id'])){
-                //Veririca se está no blacklist
-                $bl = new BlacklistController;
-                if($bl->is_blacklist($dados['id'])){
-                    $duser = @$dados->toArray();
-                    $duser['motivo'] = Qlib::get_usermeta($dados['id'],$bl->campo_motivo,true);
-                    if($duser['motivo']){
-                        $duser['motivo'] = Qlib::lib_json_array($duser['motivo']);
-                        if(isset($duser['motivo']['leilao_id']) && ($leilao_id = $duser['motivo']['leilao_id'])){
-                            $duser['motivo']['link_front'] = (new LeilaoController)->get_link_front($leilao_id);
-                            $duser['motivo']['link_admin'] = (new LeilaoController)->get_link_admin($leilao_id);
-                        }
-                    }
-                    $ret['balcklist']=[
-                        'label'=>__('Link no site'),
-                        'type'=>'html',
-                        'active'=>false,
-                        'script'=>'admin.blacklist.card_detalhes',
-                        'script_show'=>'admin.blacklist.card_detalhes',
-                        'dados'=>$duser,
-                    ];
-                }
-            }
-        }
-        if(Qlib::is_frontend()){
-            unset($ret['sep2c'],$ret['ativo'],$ret['id_permission']);
-            //determinar o tipo de pessoa pela url
-            $ret['tipo_pessoa']['type'] = 'hidden';
-            if($sec){
-                $ret['tipo_pessoa']['value'] = $sec;
-            }
-            $ret['sep3']=[
-                'label'=>'Termos',
-                'active'=>false,
-                'type'=>'html_script',
-                'exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h6 class="text-left pt-2">'.__('Termos').'</h6><hr class="mt-0">',
-                'script_show'=>''
-            ];
-            $ret['meta[termo]']=[
-                'label'=>'Concordo com os <a href="'.url('/termos-do-site').'" target="_blank">termos do site</a>',
-                'active'=>false,
-                'type'=>'checkbox',
-                'exibe_busca'=>'d-block',
-                'name'=>'meta[termos_site]',
-                'event'=>'required',
-                'value'=>'s',
-                'tam'=>'12'
-            ];
-            if($logado){
-                if($termo=$this->aceito_termo($user->id,'html')){
-                    $ret['ttermo']=[
-                        'label'=>'Termos',
-                        'active'=>false,
-                        'type'=>'html_script',
-                        'exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<p class="pt-2 mb-3">'.$termo.'</p>',
-                        'script_show'=>''
-                    ];
-                    unset($ret['meta[termo]']);
-                }
-            }else{
-
-            }
-
-            if($logado){
-                //Desablitar a edição de email no frontend
-                // $ret['email']['event'] = 'disabled';
-            }
-            //Impedir editção de email,cpf,
-            $cpf = isset($dados['cpf']) ? $dados['cpf'] : false;
-            $email = isset($dados['email']) ? $dados['email'] : false;
-            if($cpf){
-                $ret['cpf']['class_div'] = ' mt-4 pt-2 bg-secondary text-light';
-                $ret['cpf']['type'] = 'hidden_text';
-            }
-            if($email){
-                $ret['email']['class_div'] = ' mt-4 pt-2 bg-secondary text-light';
-                $ret['email']['type'] = 'hidden_text';
-            }
-            // dump($dados);
-        }
-        // dd($ret);
-        return $ret;
-    }
-    public function campos_bk2($dados=false,$local='index'){
-        $logado = Auth::check();
-        if($logado){
-            $user = Auth::user();
-            $permission = new admin\UserPermissions($user);
-            $campos_permissions = $permission->campos();
-            $arr_opc = Qlib::sql_array("SELECT id,name FROM permissions WHERE active='s' AND id >='".$user->id_permission."'",'name','id');
-        }else{
-            $campos_permissions = false;
-            $user = false;
-            $arr_opc = [];
-        }
-        if(Qlib::is_backend()){
-            $origem = 'admin';
-        }else{
-            $origem = 'site';
-        }
-        if(isset($dados['tipo_pessoa']) && $dados['tipo_pessoa']){
-            $_GET['tipo'] = $dados['tipo_pessoa'];
+        if($this->routa=='fornecedores'){
+            $_GET['tipo'] = isset($_GET['tipo'])?$_GET['tipo']:'pj';
         }
         $sec = isset($_GET['tipo'])?$_GET['tipo']:'pf';
         if($sec=='pf'){
@@ -416,27 +181,31 @@ class UserController extends Controller
             $displayPf = '';
             $displayPj = 'd-none';
         }
+        $hidden_editor = '';
+        $info_obs = '<div class="alert alert-info alert-dismissable" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true">×</button><i class="fa fa-info-circle"></i>&nbsp;<span class="sw_lato_black">Obs</span>: campos com asterisco (<i class="swfa fas fa-asterisk cad_asterisco" aria-hidden="true"></i>) são obrigatórios.</div>';
         $ret = [
-            'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
-            // 'tipo_pessoa'=>[
-            //     'label'=>'Tipo de Pessoa',
-            //     'active'=>true,
-            //     'type'=>'radio_btn',
-            //     'arr_opc'=>['pf'=>'Pessoa Física','pj'=>'Pessoa Jurídica'],
-            //     'exibe_busca'=>'d-block',
-            //     'event'=>'onclick=selectTipoUser(this.value)',
-            //     'tam'=>'12',
-            //     'value'=>$sec,
-            //     'class'=>'btn btn-outline-secondary',
-            // ],
-            'sep0'=>['label'=>'informações','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-left">'.__('Informe os dados').'</h4><hr class="mt-0">','script_show'=>''],
-            'token'=>['label'=>'token','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
+            'id'=>['label'=>'Id','js'=>true,'active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
+            'tipo_pessoa'=>[
+                'label'=>'Tipo de Pessoa',
+                'active'=>true,
+                'js'=>true,
+                'type'=>'radio_btn',
+                'arr_opc'=>['pf'=>'Pessoa Física','pj'=>'Pessoa Jurídica'],
+                'exibe_busca'=>'d-block',
+                'event'=>'onclick=selectTipoUser(this.value)',
+                'tam'=>'12',
+                'value'=>$sec,
+                'class'=>'btn btn-outline-secondary',
+            ],
+            'sep0'=>['label'=>'informações','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','text_html'=>'<h4 class="text-center">'.__('Informe os dados').'</h4><hr>','script_show'=>''],
+            'token'=>['label'=>'token','js'=>true,'active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
             'id_permission'=>[
                 'label'=>'Permissão*',
                 'active'=>true,
+                'js'=>true,
                 'type'=>'select',
                 'data_selector'=>[
-                    'campos'=>$campos_permissions,
+                    'campos'=>$permission->campos(),
                     'route_index'=>route('permissions.index'),
                     'id_form'=>'frm-permission',
                     'action'=>route('permissions.store'),
@@ -444,19 +213,20 @@ class UserController extends Controller
                     'campo_bus'=>'nome',
                     'label'=>'Permissão',
                    ],
-                'arr_opc'=>$arr_opc,'exibe_busca'=>'d-block',
+                'arr_opc'=>Qlib::sql_array("SELECT id,name FROM permissions WHERE active='s' AND id >='".$user->id_permission."' AND id != '".$this->id_permission_clientes()."'",'name','id'),'exibe_busca'=>'d-block',
                 'event'=>'required',
-                'tam'=>'12',
+                'tam'=>'3',
                 'value'=>@$_GET['id_permission'],
             ],
-            'email'=>['label'=>'E-mail *','active'=>true,'type'=>'email','exibe_busca'=>'d-none','event'=>'required','tam'=>'9','placeholder'=>''],
+            'email'=>['label'=>'E-mail *','js'=>true,'active'=>true,'type'=>'email','exibe_busca'=>'d-none','event'=>'required','tam'=>'6','placeholder'=>''],
             'password'=>['label'=>'Senha','active'=>false,'type'=>'password','exibe_busca'=>'d-none','event'=>'','tam'=>'3','placeholder'=>'','value'=>''],
             //'password_confirmation'=>['label'=>'Confirmar Senha *','active'=>false,'type'=>'password','exibe_busca'=>'d-none','event'=>'required','tam'=>'3','placeholder'=>''],
-            'name'=>['label'=>$lab_nome,'active'=>true,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'9','placeholder'=>''],
-            'cpf'=>['label'=>$lab_cpf,'active'=>false,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cpf','tam'=>'3'],
-            'cnpj'=>['label'=>'CNPJ *','active'=>false,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cnpj required','tam'=>'4','class_div'=>'div-pj '.$displayPj],
-            'razao'=>['label'=>'Razão social *','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'4','placeholder'=>'','class_div'=>'div-pj '.$displayPj],
-            'config[nome_fantasia]'=>['label'=>'Nome fantasia','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'4','placeholder'=>'','class_div'=>'div-pj '.$displayPj],
+            // 'nome'=>['label'=>$lab_nome,'active'=>true,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'9','placeholder'=>''],
+            'name'=>['label'=>$lab_nome,'js'=>true,'active'=>true,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'9','placeholder'=>''],
+            'cpf'=>['label'=>$lab_cpf,'active'=>false,'js'=>true,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cpf','tam'=>'3'],
+            'cnpj'=>['label'=>'CNPJ *','active'=>false,'js'=>true,'type'=>'tel','exibe_busca'=>'d-block','event'=>'mask-cnpj required','tam'=>'4','class_div'=>'div-pj '.$displayPj],
+            'razao'=>['label'=>'Razão social *','js'=>true,'active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'required','tam'=>'4','placeholder'=>'','class_div'=>'div-pj '.$displayPj],
+            'config[nome_fantasia]'=>['label'=>'Nome fantasia','js'=>true,'active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'4','placeholder'=>'','class_div'=>'div-pj '.$displayPj],
             'config[celular]'=>['label'=>'Telefone celular','active'=>true,'type'=>'tel','tam'=>'4','exibe_busca'=>'d-block','event'=>'onblur=mask(this,clientes_mascaraTelefone); onkeypress=mask(this,clientes_mascaraTelefone);','cp_busca'=>'config][celular'],
             'config[telefone_residencial]'=>['label'=>'Telefone residencial','active'=>false,'type'=>'tel','tam'=>'4','exibe_busca'=>'d-block','event'=>'onblur=mask(this,clientes_mascaraTelefone); onkeypress=mask(this,clientes_mascaraTelefone);','class_div'=>'div-pf '.$displayPf,'cp_busca'=>'config][telefone_residencial'],
             'config[telefone_comercial]'=>['label'=>'Telefone comercial','active'=>false,'type'=>'tel','tam'=>'4','exibe_busca'=>'d-block','event'=>'onblur=mask(this,clientes_mascaraTelefone); onkeypress=mask(this,clientes_mascaraTelefone);','cp_busca'=>'config][telefone_comercial'],
@@ -504,29 +274,96 @@ class UserController extends Controller
                 'class'=>'select2',
                 'cp_busca'=>'config][tipo_pj','class_div'=>'div-pj '.$displayPj,
             ],
-            'sep1'=>['label'=>'Endereço','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-center">'.__('Endereço').'</h4><hr class="mt-0">','script_show'=>'<h4 class="text-center">'.__('Endereço').'</h4><hr class="mt-0">'],
+            'sep1'=>['label'=>'Endereço','active'=>false,'type'=>'html','exibe_busca'=>'d-none','event'=>'','tam'=>'12','text_html'=>'<h4 class="text-center">'.__('Endereço').'</h4><hr>','script_show'=>'<h4 class="text-center">'.__('Endereço').'</h4><hr>'],
             'config[cep]'=>['label'=>'CEP','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'mask-cep onchange=buscaCep1_0(this.value)','tam'=>'3'],
-            'config[endereco]'=>['label'=>'Endereço','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'endereco=cep','tam'=>'7','cp_busca'=>'config][endereco'],
+            'config[endereco]'=>['label'=>'Endereço','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'endereco=cep q-inp="endereco"','tam'=>'7','cp_busca'=>'config][endereco'],
             'config[numero]'=>['label'=>'Numero','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'numero=cep','tam'=>'2','cp_busca'=>'config][numero'],
             'config[complemento]'=>['label'=>'Complemento','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'4','cp_busca'=>'config][complemento'],
-            'config[cidade]'=>['label'=>'Cidade','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'cidade=cep','tam'=>'6','cp_busca'=>'config][cidade'],
+            'config[bairro]'=>['label'=>'bairro','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'bairro=cep q-inp="bairro"','tam'=>'3','cp_busca'=>'config][bairro'],
+            'config[cidade]'=>['label'=>'Cidade','active'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'cidade=cep q-inp="cidade"','tam'=>'3','cp_busca'=>'config][cidade'],
             'config[uf]'=>['label'=>'UF','active'=>false,'js'=>false,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'2','cp_busca'=>'config][uf'],
             //'foto_perfil'=>['label'=>'Foto','active'=>false,'js'=>false,'placeholder'=>'','type'=>'file','exibe_busca'=>'d-none','event'=>'','tam'=>'12'],
-            'sep2'=>['label'=>'Preferencias','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-left">'.__('Preferências').'</h4><hr class="mt-0">','script_show'=>'<h4 class="text-left">'.__('Preferências').'</h4><hr class="mt-0">'],
-            'ativo'=>['label'=>'Liberado para uso','active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
+            'sep2'=>['label'=>'Preferencias','active'=>false,'type'=>'html','exibe_busca'=>'d-none','event'=>'','tam'=>'12','text_html'=>'<h4 class="text-center">'.__('Preferências').'</h4><hr>','script_show'=>'<h4 class="text-center">'.__('Preferências').'</h4><hr>'],
+            'ativo'=>['label'=>'Liberado para uso','js'=>true,'tab'=>$this->tab,'active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
             'preferencias[newslatter]'=>['label'=>'Deseja receber e-mails com as novidades','active'=>false,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-none','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não'],'cp_busca'=>'preferencias][newslatter'],
 
         ];
-        if(!$logado){
-            unset($ret['id_permission']);
+        if($this->routa == 'fornecedores'){
+            $ret['email']['tam'] = 9;
+            $ret['id_permission'] = ['label'=>'id_permission','js'=>true,'value'=>$this->id_permission_fornecedores() ,'active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'];
+
         }
-        if(Qlib::is_frontend()){
-            unset($ret['sep2'],$ret['ativo'],$ret['id_permission']);
-            //Desablitar a edição de email no frontend
-            if($logado){
-                $ret['email']['event'] = 'disabled';
+        if($local=='create' || $local=='show' || $local=='edit'){
+            //Importante para exibição das preferencias.
+            if(isset($dados['preferencias'])){
+                foreach ($dados['preferencias'] as $k => $v) {
+                   // $ret['preferencias['.$k.']']['value'] = $v;
+                    if($v=='s'){
+                        $ret['preferencias['.$k.']']['checked'] = $v;
+                    }
+                }
+            }
+            if($local=='show'){
+                unset($ret['password']);
+            }elseif($local=='create' || $local=='edit'){
+                $ret['tipo_pessoa']['label'] = '';
             }
         }
+        //dd($ret);
+        return $ret;
+    }
+    public function campos_show($dados=false){
+        $user = Auth::user();
+        $permission = new admin\UserPermissions($user);
+        if(isset($dados['tipo_pessoa']) && $dados['tipo_pessoa']){
+            $_GET['tipo'] = $dados['tipo_pessoa'];
+        }
+        $sec = isset($sec)?$sec:request()->segment(3);
+        $sec = isset($_GET['tipo'])?$_GET['tipo']:'pf';
+        if($sec=='pf'){
+            $lab_nome = 'Nome completo *';
+            $lab_cpf = 'CPF *';
+            $displayPf = '';
+            $displayPj = 'd-none';
+        }elseif($sec=='pj'){
+            $lab_nome = 'Nome do responsável *';
+            $lab_cpf = 'CPF do responsável*';
+            $displayPf = 'd-none';
+            $displayPj = '';
+        }else{
+            $lab_nome = 'Nome completo *';
+            $lab_cpf = 'CPF *';
+            $displayPf = '';
+            $displayPj = 'd-none';
+        }
+        $hidden_editor = '';
+        $info_obs = '<div class="alert alert-info alert-dismissable" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true">×</button><i class="fa fa-info-circle"></i>&nbsp;<span class="sw_lato_black">Obs</span>: campos com asterisco (<i class="swfa fas fa-asterisk cad_asterisco" aria-hidden="true"></i>) são obrigatórios.</div>';
+        $ret = [
+            'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
+            'id_permission'=>[
+                'label'=>'Permissão*',
+                'active'=>true,
+                'type'=>'select',
+                'data_selector'=>[
+                    'campos'=>$permission->campos(),
+                    'route_index'=>route('permissions.index'),
+                    'id_form'=>'frm-permission',
+                    'action'=>route('permissions.store'),
+                    'campo_id'=>'id',
+                    'campo_bus'=>'nome',
+                    'label'=>'Permissão',
+                ],'arr_opc'=>Qlib::sql_array("SELECT id,name FROM permissions WHERE active='s' AND id >='".$user->id_permission."'",'name','id'),'exibe_busca'=>'d-block',
+                'event'=>'',
+                'tam'=>'6',
+                'value'=>@$_GET['id_permission'],
+            ],
+            'nome'=>['label'=>'Nome completo','active'=>true,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'6'],
+            'token'=>['label'=>'token','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
+            'email'=>['label'=>'Email','active'=>true,'type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'4'],
+            'password'=>['label'=>'Senha','active'=>false,'type'=>'password','value'=>'','exibe_busca'=>'d-none','event'=>'','tam'=>'6'],
+            'ativo'=>['label'=>'Liberar','active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'2','arr_opc'=>['s'=>'Sim','n'=>'Não']],
+            //'email'=>['label'=>'Observação','active'=>false,'type'=>'textarea','exibe_busca'=>'d-block','event'=>'','tam'=>'12'],
+        ];
         return $ret;
     }
     public function index(User $user)
@@ -602,25 +439,19 @@ class UserController extends Controller
     public function create(User $user)
     {
         $this->authorize('is_admin', $user);
-        $title = __('Cadastrar usuário');
+        $title = $this->title;
         $titulo = $title;
         $config = [
             'ac'=>'cad',
             'frm_id'=>'frm-users',
             'route'=>$this->routa,
+            'url'=>$this->url,
         ];
         $value = [
             'token'=>uniqid(),
         ];
-        $campos = $this->campos();
-        //REGISTRAR EVENTO CADASTRO
-        $regev = Qlib::regEvent(['action'=>'create','tab'=>$this->tab,'config'=>[
-            'obs'=>'Abriu tela de cadastro',
-            'link'=>route($this->routa.'.create'),
-            ]
-        ]);
-
-        return view($this->routa.'.createedit',[
+        $campos = $this->campos(false,'create');
+        return view($this->view.'.createedit',[
             'config'=>$config,
             'title'=>$title,
             'titulo'=>$titulo,
@@ -630,56 +461,25 @@ class UserController extends Controller
     }
     public function store(Request $request)
     {
-        $dados = $request->all();
-        $origem = isset($dados['config']['origem']) ? $dados['config']['origem'] : false;
-        $tag_origem = $origem;
-
-        if($origem=='admin'){
-            $validatedData = $request->validate([
-                'name' => ['required','string',new FullName],
-                'email' => ['required','string','unique:users'],
-                'cpf'   =>[new RightCpf,'required','unique:users'],
+        $validatedData = $request->validate([
+            'name' => ['required','string',new FullName],
+            'email' => ['required','string','unique:users'],
+            'cpf'   =>[new RightCpf,'unique:users']
             ],[
-                'nome.required'=>__('O nome é obrigatório'),
-                'nome.string'=>__('É necessário conter letras no nome'),
+                'name.required'=>__('O nome é obrigatório'),
+                'name.string'=>__('É necessário conter letras no nome'),
                 'email.unique'=>__('E-mail já cadastrado'),
                 'cpf.unique'=>__('CPF já cadastrado'),
             ]);
-        }else{
-            if($origem=='precadastro'){
-                $validatedData = $request->validate([
-                    'cnpj'   =>[new RightCnpj,'required','unique:users']
-                ],[
-                        'cnpj.unique'=>__('CNPJ já cadastrado'),
-                ]);
-            }else{
-                $validatedData = $request->validate([
-                    'name' => ['required','string',new FullName],
-                    'email' => ['required','string','unique:users'],
-                    'cpf'   =>[new RightCpf,'required','unique:users']
-                ],[
-                        'nome.required'=>__('O nome é obrigatório'),
-                        'nome.string'=>__('É necessário conter letras no nome'),
-                        'email.unique'=>__('E-mail já cadastrado'),
-                        'cpf.unique'=>__('CPF já cadastrado'),
-                ]);
-            }
-        }
-        // $vl = ob_get_clean();
-        // dd($vl);
-        // if($origem!='admin'){
-        //     $ret = (new RegisterController)->init($dados);
-        //     $ret['login'] = new llController($request);
-        //     return $ret;
-        // }
+        $dados = $request->all();
         $ajax = isset($dados['ajax'])?$dados['ajax']:'n';
-        $dados['tipo_pessoa'] = isset($dados['tipo_pessoa'])?$dados['tipo_pessoa']:'pf';
-        if(empty($dados['tipo_pessoa'])){
-            $dados['tipo_pessoa'] = 'pf';
+        $dados['ativo'] = isset($dados['ativo'])?$dados['ativo']:'n';
+        //$dados['ativo'] = isset($dados['ativo'])?$dados['ativo']:'n';
+        //inicio gerenciar a pemissão automatica
+        if($this->routa == 'fornecedores' && is_null($dados['id_permission'])){
+            $dados['id_permission'] =  $this->id_permission_fornecedores();
         }
-        $dados['ativo'] = isset($dados['ativo'])?$dados['ativo']:'s';
-        $dados['token'] = isset($dados['token'])?$dados['token']:uniqid();
-        $dados['id_permission'] = isset($dados['id_permission'])?$dados['id_permission']:5;
+        //fim gerenciar a pemissão automatica
         if(isset($dados['password']) && !empty($dados['password'])){
             $dados['password'] = Hash::make($dados['password']);
         }else{
@@ -687,176 +487,35 @@ class UserController extends Controller
                 unset($dados['password']);
             }
         }
-        $d = $dados;
-        unset($dados['meta']);
         $salvar = User::create($dados);
         $dados['id'] = $salvar->id;
-        //Atualização de meta dados
-        $s_me=false;
-        if(isset($d['meta']) && is_array($d['meta'])){
-            $d['meta']['tag_origem'] = $tag_origem;
-            $s_me = $this->save_meta($salvar->id,$d['meta']);
-        }
         $route = $this->routa.'.index';
         $ret = [
             'mens'=>$this->label.' cadastrada com sucesso!',
             'color'=>'success',
-            's_me'=>$s_me,
             'idCad'=>$salvar->id,
             'exec'=>true,
             'dados'=>$dados
         ];
-        if($origem=='precadastro'){
-            if($salvar->id){
-                $ret['exec'] = true;
-            }
-            return $ret;
-        }
+
         if($ajax=='s'){
-            //Envia notificação de cadastro
-            // $notific_new_user_add = Qlib::qoption('notific_new_user_add')?Qlib::qoption('notific_new_user_add'):'s';
-            if(isset($salvar->id) && $this->notific_new_user() && $origem != 'precadastro'){
-                $user_cad = User::Find($salvar->id);
-                Notification::send($user_cad,new notificaNewUser($user_cad));
-            }
-            //REGISTRAR EVENTOS
-           if($origem=='admin'){
-                //requisição realizada no painel de administrador
-                (new EventController)->listarEvent(['tab'=>$this->tab,'id'=>$salvar->id,'this'=>$this]);
-                $ret['return'] = route($route).'?idCad='.$salvar->id;
-                if($request->has('quick_cad')){
-                    if($request->get('quick_cad')=='leilao'){
-                        //go to stet 2
-                        $ret['redirect'] = (new QuickCadController())->link_step2(@$salvar->id);;
-                    }
-                }else{
-                    $ret['redirect'] = route($this->routa.'.edit',['id'=>$salvar->id]);
-                }
-            }else{
-                //requisição realizada pelo usuario do site
-                if($salvar->id){
-                    $authenticate = $this->authenticate($request);
-                    if($authenticate){
-                        $ret['redirect'] = url('/').'/'.Qlib::get_slug_post_by_id(37);
-                        $ret['return'] = $ret['redirect'];
-                    }else{
-                        $ret['mens'] = @$authenticate['mens'];
-                    }
-                    // $ret['return'] = route($route).'?idCad='.$salvar->id;
-                    // $ret['redirect'] = route($this->routa.'.edit',['id'=>$salvar->id]);
-
-                }else{
-
-                }
-            }
+            $ret['return'] = route($route).'?idCad='.$salvar->id;
+            $ret['redirect'] = route($this->routa.'.edit',['id'=>$salvar->id]);
             return response()->json($ret);
         }else{
             return redirect()->route($route,$ret);
         }
     }
 
-    public function perfilShow(){
-        $id = Auth::id();
-        return $this->show($id,'perfil');
-    }
     public function show($id)
     {
-        $local = request()->route()->getName();
-        $dados = User::findOrFail($id);
-        if($local=='sistema.perfil'){
-            $rt = 'sistema';
-        }else{
-            $rt = $this->routa;
-        }
-        $this->authorize('ler', $rt);
-        if(!empty($dados)){
-            $title = 'Cadastro de usuários';
-            $titulo = $title;
-            //dd($dados);
-            $dados['ac'] = 'alt';
-            if(isset($dados['config'])){
-                $dados['config'] = Qlib::lib_json_array($dados['config']);
-            }
-            $arr_escolaridade = Qlib::sql_array("SELECT id,nome FROM escolaridades ORDER BY nome ", 'nome', 'id');
-            $arr_estadocivil = Qlib::sql_array("SELECT id,nome FROM estadocivils ORDER BY nome ", 'nome', 'id');
-            $listFiles = false;
-            //$dados['renda_familiar'] = number_format($dados['renda_familiar'],2,',','.');
-            $campos = $this->campos($dados,'show');
-            if(isset($dados['token'])){
-                $listFiles = _upload::where('token_produto','=',$dados['token'])->get();
-            }
-            $config = [
-                'ac'=>'alt',
-                'frm_id'=>'frm-users',
-                'route'=>$this->routa,
-                'id'=>$id,
-                'local'=>$local,
-                'class_card1'=>'col-md-8',
-                'class_card2'=>'col-md-4',
-            ];
-            if($local=='sistema.perfil'){
-                $config['class_card1'] = 'col-md-12';
-                $config['class_card2'] = 'd-none';
-            }else{
-                //REGISTRAR EVENTOS
-                (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-            }
-
-            if(!$dados['matricula'])
-                $config['display_matricula'] = 'd-none';
-            if(isset($dados['config']) && is_array($dados['config'])){
-                foreach ($dados['config'] as $key => $value) {
-                    if(is_array($value)){
-
-                    }else{
-                        $dados['config['.$key.']'] = $value;
-                    }
-                }
-            }
-            $campos['ativo']['type']='hidden';
-            $ret = [
-                'value'=>$dados,
-                'config'=>$config,
-                'title'=>$title,
-                'titulo'=>$titulo,
-                'arr_escolaridade'=>$arr_escolaridade,
-                'arr_estadocivil'=>$arr_estadocivil,
-                'listFiles'=>$listFiles,
-                'campos'=>$campos,
-                'routa'=>$this->routa,
-                'eventos'=>(new EventController)->listEventsPost(['post_id'=>$id]),
-                // 'eventos'=>(new EventController)->listEventsUser(['id_user'=>$id]),
-                'exec'=>true,
-            ];
-            // return view($this->routa.'.show',$ret);
-            return view($this->view.'.show',$ret);
-        }else{
-            $ret = [
-                'exec'=>false,
-            ];
-            return redirect()->route($this->routa.'.index',$ret);
-        }
-    }
-    public function perfilEdit($user,$local=false)
-    {
-        $id = Auth::id();
-        return $this->edit($id);
-    }
-    public function edit($user)
-    {
-        $id = $user;
+        //$id = $this->user;
         $dados = User::where('id',$id)->get();
-        $local = request()->route()->getName();
-
         $routa = 'users';
-        if($local=='sistema.perfil.edit'){
-            $this->authorize('is_admin_logado', $user);
-        }else{
-            $this->authorize('is_admin', $user);
-        }
+        $this->authorize('ler', $this->url);
 
         if(!empty($dados)){
-            $title = 'Editar Cadastro de usuários';
+            $title = 'Editar Cadastro de users';
             $titulo = $title;
             $dados[0]['ac'] = 'alt';
             if(isset($dados[0]['config'])){
@@ -870,13 +529,11 @@ class UserController extends Controller
                 'ac'=>'alt',
                 'frm_id'=>'frm-users',
                 'route'=>$this->routa,
+                'url'=>$this->url,
                 'id'=>$id,
-                'local'=>$local,
             ];
-            $campos = $this->campos($dados[0]);
-            if($local=='sistema.perfil.edit'){
-                $campos['ativo']['type']='hidden';
-            }
+            $dcampo = $dados[0];
+            $campos = $this->campos($dcampo,'show');
             $ret = [
                 'value'=>$dados[0],
                 'config'=>$config,
@@ -886,9 +543,8 @@ class UserController extends Controller
                 'campos'=>$campos,
                 'exec'=>true,
             ];
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this,'id'=>$id]);
-            return view($routa.'.createedit',$ret);
+
+            return view($routa.'.show',$ret);
         }else{
             $ret = [
                 'exec'=>false,
@@ -896,41 +552,164 @@ class UserController extends Controller
             return redirect()->route($routa.'.index',$ret);
         }
     }
-    /**
-     * Metodo para gerencia o login dos clientes
-     * @param ['email' => $email, 'password' => $password, 'ativo' => 's', 'excluido' => 'n']
-     * @return boolean true|false
-     */
-    public function login($dados){
-        $email = isset($dados['email']) ? $dados['email'] : false;
-        $password = isset($dados['password']) ? $dados['password'] : false;
-        if (Auth::attempt(['email' => $email, 'password' => $password, 'ativo' => 's', 'excluido' => 'n'],@$dados['remember'])) {
-            return true;
+    public function perfilShow()
+    {
+        $d = Auth::user();
+        $id = $d['id'];
+        $dados[0] = $d;
+        $routa = 'users';
+        $this->url = 'sistema';
+        $this->authorize('ler', $this->url);
+
+        if(!empty($dados)){
+            $title = 'Perfil';
+            $titulo = $title;
+            $dados[0]['ac'] = 'alt';
+            if(isset($dados[0]['config'])){
+                $dados[0]['config'] = Qlib::lib_json_array($dados[0]['config']);
+            }
+            $listFiles = false;
+            if(isset($dados[0]['token'])){
+                $listFiles = _upload::where('token_produto','=',$dados[0]['token'])->get();
+            }
+            if($this->routa=='pefil'){
+                $this->routa = 'perfil';
+            }
+            $config = [
+                'ac'=>'alt',
+                'frm_id'=>'frm-users',
+                'route'=>$this->routa,
+                'url'=>$this->url,
+                'id'=>$id,
+            ];
+            // dd($this->routa);
+            $dcampo = $dados[0];
+            $campos = $this->campos($dcampo,'show');
+            $ret = [
+                'value'=>$dados[0],
+                'config'=>$config,
+                'title'=>$title,
+                'titulo'=>$titulo,
+                'listFiles'=>$listFiles,
+                'campos'=>$campos,
+                'exec'=>true,
+            ];
+            return view($routa.'.show',$ret);
         }else{
-            return false;
+            $ret = [
+                'exec'=>false,
+            ];
+            return redirect()->route($routa.'.index',$ret);
         }
     }
+
+    public function edit($user)
+    {
+        $id = $user;
+        $dados = User::where('id',$id)->get();
+        $routa = $this->routa;//'users';
+        $view = $this->view;//'users';
+        $this->authorize('is_admin', $user);
+
+        if(!empty($dados)){
+            $title = 'Editar Cadastro de users';
+            $titulo = $title;
+            $dados[0]['ac'] = 'alt';
+            if(isset($dados[0]['config'])){
+                $dados[0]['config'] = Qlib::lib_json_array($dados[0]['config']);
+            }
+            $listFiles = false;
+            if(isset($dados[0]['token'])){
+                $listFiles = _upload::where('token_produto','=',$dados[0]['token'])->get();
+            }
+            $config = [
+                'ac'=>'alt',
+                'frm_id'=>'frm-users',
+                'route'=>$this->routa,
+                'url'=>$this->url,
+                'id'=>$id,
+            ];
+            $dcampo = $dados[0];
+            $campos = $this->campos($dcampo,'edit');
+            $ret = [
+                'value'=>$dados[0],
+                'config'=>$config,
+                'title'=>$title,
+                'titulo'=>$titulo,
+                'listFiles'=>$listFiles,
+                'campos'=>$campos,
+                'exec'=>true,
+            ];
+
+            return view($view.'.createedit',$ret);
+            // return view('admin.padrao.createedit',$ret);
+        }else{
+            $ret = [
+                'exec'=>false,
+            ];
+            return redirect()->route($routa.'.index',$ret);
+        }
+    }
+    public function perfilEdit(Request $request)
+    {
+        $d = Auth::user();
+        $id = $d['id'];
+        $dados = User::where('id',$id)->get();
+        $routa = $this->routa;//'users';
+        $view = $this->view;//'users';
+        // $this->authorize('is_admin', $routa);
+        $this->authorize('is_user_back', $routa);
+
+        if(!empty($dados)){
+            $title = 'Editar Cadastro de users';
+            $titulo = $title;
+            $dados[0]['ac'] = 'alt';
+            if(isset($dados[0]['config'])){
+                $dados[0]['config'] = Qlib::lib_json_array($dados[0]['config']);
+            }
+            $listFiles = false;
+            if(isset($dados[0]['token'])){
+                $listFiles = _upload::where('token_produto','=',$dados[0]['token'])->get();
+            }
+            $config = [
+                'ac'=>'alt',
+                'frm_id'=>'frm-users',
+                'route'=>$this->routa,
+                'route_update'=>'users',
+                'url'=>$this->url,
+                'id'=>$id,
+            ];
+            $dcampo = $dados[0];
+            $campos = $this->campos($dcampo,'edit');
+            $ret = [
+                'value'=>$dados[0],
+                'config'=>$config,
+                'title'=>$title,
+                'titulo'=>$titulo,
+                'listFiles'=>$listFiles,
+                'campos'=>$campos,
+                'exec'=>true,
+            ];
+            return view($view.'.createedit',$ret);
+            // return view('admin.padrao.createedit',$ret);
+        }else{
+            $ret = [
+                'exec'=>false,
+            ];
+            return redirect()->route($routa.'.index',$ret);
+        }
+    }
+
     public function update(Request $request, $id)
     {
         $validatedData = $request->validate([
+            // 'nome' => ['required',new FullName],
             'name' => ['required',new FullName],
-            'email'   =>['required','string','unique:users,email,'.$id],
-            'cpf'   =>[new RightCpf,'unique:users,cpf,'.$id],
+            'cpf'   =>[new RightCpf]
         ]);
-
         $data = [];
         $dados = $request->all();
-
-        $meta = isset($dados['meta']) ? $dados['meta']:false;
-        unset($dados['meta']);
         $ajax = isset($dados['ajax'])?$dados['ajax']:'n';
-        if(!$dados['password'] || empty($dados['password'])){
-            unset($dados['password']);
-        }
-        if(!$dados['token'] || empty($dados['token'])){
-            $dados['token'] = uniqid();
-        }
-        //verifica se requisição esta vido do site e se a orgem do cadastro tbm
         foreach ($dados as $key => $value) {
             if($key!='_method'&&$key!='_token'&&$key!='ac'&&$key!='ajax'){
                 if($key=='data_batismo' || $key=='data_nasci'){
@@ -946,68 +725,27 @@ class UserController extends Controller
             }
         }
         $userLogadon = Auth::id();
-        if(Qlib::is_backend()){
-            $data['ativo'] = isset($data['ativo'])?$data['ativo']:'n';
-        }
+        $data['ativo'] = isset($data['ativo'])?$data['ativo']:'n';
+        $data['preferencias']['newslatter'] = isset($data['preferencias']['newslatter'])?$data['preferencias']['newslatter']:'n';
         $data['autor'] = $userLogadon;
         if(isset($dados['config'])){
-            $arr_config = $dados['config'];
             $dados['config'] = Qlib::lib_array_json($dados['config']);
         }
         $atualizar=false;
         if(empty($data['passaword'])){
             unset($data['passaword']);
         }
-        $s_me = [];
         if(!empty($data)){
-           $atualizar=User::where('id',$id)->update($data);
+            $atualizar=User::where('id',$id)->update($data);
             $route = $this->routa.'.index';
-            //Atualização de meta dados
-            if(is_array($meta)){
-                $s_me = $this->save_meta($id,$meta);
-            }
             $ret = [
                 'exec'=>$atualizar,
                 'id'=>$id,
                 'mens'=>'Salvo com sucesso!',
                 'color'=>'success',
                 'idCad'=>$id,
-                's_me'=>$s_me,
                 'return'=>$route,
             ];
-            if($request->has('redirect')){
-                $ret['redirect'] = $request->get('redirect');
-            }else{
-                if(isset($data['config']['origem']) && $data['config']['origem']=='site'){
-                    //$ret['redirect'] = route('users.show',['id'=>$id]); sem ação no memento
-                }else{
-                    $ret['redirect'] = route('users.show',['id'=>$id]);
-                }
-            }
-            if($atualizar){
-                //REGISTRAR EVENTOS
-                (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-            }
-            //verifica qual é a orgem
-            //se for do site e o cliente não estiver logado efetur login no sistema
-            // dump(Qlib::is_frontend(),$arr_config['origem']);
-            // dd($arr_config);
-            if(Qlib::is_frontend() && isset($arr_config['origem']) && $arr_config['origem']=='site'){
-                //verifica usuario atual está logado
-                if (!Auth::check()) {
-                    $user_cad = User::Find($id);
-                    // Notification::send($user_cad,new notificaNewUser($user_cad));
-                    //Efetuar login
-                    //adicionar redirec
-                    // dd($dados);
-                    if($this->login($dados)){
-                        $ret['redirect'] = url('/');
-                        $ret['return'] = $ret['redirect'];
-                    }
-                    // $ret['login'] = $this->login($request);
-                    // dump($ret);
-                }
-            }
         }else{
             $route = $this->routa.'.edit';
             $ret = [
@@ -1017,8 +755,6 @@ class UserController extends Controller
                 'color'=>'danger',
             ];
         }
-
-
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$id;
             return response()->json($ret);
@@ -1038,13 +774,6 @@ class UserController extends Controller
             }else{
                 $ret = redirect()->route($routa.'.index',['mens'=>'Registro não encontrado!','color'=>'danger']);
             }
-            //REGISTRAR EVENTO
-            $regev = Qlib::regEvent(['action'=>'destroy','tab'=>$this->tab,'config'=>[
-                'obs'=>'Exclusão de cadastro Id '.$id,
-                'link'=>'#',
-                ]
-            ]);
-
             return $ret;
         }
 
@@ -1053,563 +782,6 @@ class UserController extends Controller
             $ret = response()->json(['mens'=>__('Registro '.$id.' deletado com sucesso!'),'color'=>'success','return'=>route($this->routa.'.index')]);
         }else{
             $ret = redirect()->route($routa.'.index',['mens'=>'Registro deletado com sucesso!','color'=>'success']);
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para salvar campos meta do usuario
-     * @param integer user_id, Array metadata=dados meta do usuario
-     *
-     */
-    public function save_meta($user_id,$metadata)
-    {
-        $ret = [];
-        if($user_id && is_array($metadata)){
-            // dd($metadata,$user_id);
-            foreach ($metadata as $k => $v) {
-                if(is_array($v)){
-                    $v = Qlib::lib_array_json($v);
-                }
-                if($k == 'termo' && $v=='s'){
-                    //aceitação dos termos
-                    $v = Qlib::lib_array_json([
-                        'aceito_termo' => 's',
-                        'data' => Qlib::dataLocal(),
-                        'ip' => $_SERVER['REMOTE_ADDR'],
-                    ]);
-                }
-                $ret[$k] = Qlib::update_usermeta($user_id,$k,$v);
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para verifica se usuario aceito os termos
-     * @param int $user_id,$type=tipo de retorno se for html resultado será um html
-     */
-    public function aceito_termo($user_id,$type='')
-    {
-        $termo = Qlib::get_usermeta($user_id,'termo',true);
-        $ret = false;
-        if($termo){
-            $arr_t = Qlib::lib_json_array($termo);
-            if(@$arr_t['aceito_termo']=='s'){
-                if($type=='html'){
-                    $ret = '<span class="text-success">Termos aceitos pelo usuário em {data} :: {ip}</span>';
-                    $ret = str_replace('{data}',$arr_t['data'],$ret);
-                    $ret = str_replace('{ip}',$arr_t['ip'],$ret);
-                }else{
-                    $ret = true;
-                }
-            }
-        }
-        return $ret;
-    }
-    public function exec($token_conta = null)
-    {
-        $cont = false;
-        //if($token_conta){
-            $verifica_fatura = $this->verifica_faturas(array('token_conta'=>$token_conta));
-            if(isset($_GET['teste'])){
-                Qlib::lib_print($verifica_fatura);
-            }
-            $verifica_fatura['acao'] = isset($verifica_fatura['acao'])?$verifica_fatura['acao']:false;
-            if(isset($verifica_fatura['acao'])&&$verifica_fatura['acao']=='alertar'){
-                if(Qlib::isAdmin()){
-                    $cont = @$verifica_fatura['mens'];
-                    //echo $cont;
-                }
-            }elseif($verifica_fatura['acao']=='suspender' || $verifica_fatura['acao']=='desativar'){
-                //Não terá acesso ao admin somente ao boleto e as faturas e o site estará desativado tbem
-                if(Qlib::isAdmin(3)){
-                    $cont = @$verifica_fatura['mens'];
-                }else{
-                    $cont = Qlib::formatMensagemInfo('Sistema temporariamente suspenso entre em contato com o administrador','danger');
-                }
-                $pagSusped = 'suspenso';
-                if($this->seg1!=$pagSusped){
-                    Qlib::redirect('/'.$pagSusped,0);
-                    die();
-                }
-                //echo $cont;
-            }
-        //}
-        return $cont;
-    }
-    public function verifica_faturas($config=false,$cache=true){
-		$ret['exec'] = false;
-		$ret['cache'] = false;
-		//exemplo de uso
-		/*
-		$this = new apictloja;
-		$ret = $this->verifica_faturas(array('token_conta'=>''));
-		Qlib::lib_print($ret);
-		*/
-		$token = isset($config['token_conta'])?$config['token_conta']:$this->tk_conta;
-
-		if($token){
-            $ver_sess = session('verifica_faturas');
-            //Qlib::lib_print($ver_sess);
-
-			if(isset($ver_sess['exec'])&&$ver_sess['exec'] && $cache){
-				$arr_response = $ver_sess;
-				$ret['cache'] = true;
-			}else{
-
-				$curl = curl_init();
-
-				curl_setopt_array($curl, array(
-				  CURLOPT_URL => $this->url.'/verifica_faturas/'.$token,
-				  CURLOPT_RETURNTRANSFER => true,
-				  CURLOPT_ENCODING => '',
-				  CURLOPT_MAXREDIRS => 10,
-				  CURLOPT_TIMEOUT => 0,
-				  CURLOPT_FOLLOWLOCATION => true,
-				  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				  CURLOPT_CUSTOMREQUEST => 'GET',
-				  CURLOPT_HTTPHEADER => array(
-					'Access-Token: '.$this->access_token
-				  ),
-				));
-				$response = curl_exec($curl);
-				curl_close($curl);
-				$arr_response = json_decode($response,true);
-				//$ret['arr_response'] = $arr_response;
-			}
-			if(isset($arr_response['exec'])){
-				$ret['exec'] = $arr_response['exec'];
-				$ret['acao'] = $arr_response['acao'];
-                session(['verifica_faturas'=>$arr_response]);
-				//$ver_sess=$arr_response;
-			}else{
-				$ret['acao'] = 'liberar';
-            }
-			if(isset($arr_response['mens'])){
-				$ret['mens'] = $arr_response['mens'];
-			}
-			$ret['token'] = $token;
-		}else{
-			$ret['mens'] = Qlib::formatMensagemInfo('Configuração ou token inválido','danger');
-		}
-        //dd($ret);
-        return $ret;
-	}
-    public function pararAlertaFaturaVencida(Request $request){
-        $request->session()->put('verifica_faturas.acao','liberar');
-        $ret['exec']=true;
-		return $ret;
-	}
-    public function suspenso()
-    {
-        return view('admin.suspenso');
-    }
-    /**Metodo para gerar o formulario no front pode ser iniciado com o short_code [sc ac="form_meu_cadastro"] */
-    public function form_meu_cadastro($post_id=false,$dados=false,$meu_cadastro_id=false){
-        $route = $this->routa;
-        if(Gate::allows('is_customer_logado')||Gate::allows('is_admin2')){
-            if(Auth::check()){
-                $ac = 'alt';
-                $dadosmeu_cadastro = Auth::user();
-                $meu_cadastro_id = $dadosmeu_cadastro->id;
-            }else{
-                $dadosmeu_cadastro = false;
-                $ac = 'cad';
-            }
-        }else{
-            $ac = 'cad';
-            $dadosmeu_cadastro = false;
-        }
-        $seg3 = request()->segment(3);
-        $seg4 = request()->segment(4);
-        if($seg4 && $ac=='cad'){
-            //é porque o clientes não está com o cadastro completo
-            $dadosmeu_cadastro = User::where('token','=',$seg4)->get();
-            if($dadosmeu_cadastro->count() > 0){
-                //verifica se ele é um precadastro incompleto
-                $dcli = $dadosmeu_cadastro->toArray();
-                $ac = 'alt';
-                $dadosmeu_cadastro = $dcli[0];
-            }else{
-                return redirect('/user/create');
-                // dd($dadosmeu_cadastro->count());
-            }
-        }
-        // $meu_cadastro_id = $meu_cadastro_id ? $meu_cadastro_id : $seg2;
-
-        if(!$dados && $post_id){
-
-            $dados = Post::Find($post_id);
-        }
-        $title = __('Meu Cadastro');
-        $redirect = url('/');
-        if($seg3=='pj'){
-            $title .= ' '.__('de Escola');
-        }elseif($seg3=='pf'){
-            $title .= ' '.__('de Aluno');
-            // $redirect = url('/');
-        }
-        $titulo = $title;
-        $config = [
-            'ac'=>$ac,
-            'frm_id'=>'frm-posts',
-            'route'=>$route,
-            'view'=>'site.index',
-            'file_submit'=>'site.js_submit',
-            'arquivos'=>'jpeg,jpg,png',
-            'redirect'=>$redirect,
-            'title'=>$title,
-            'titulo'=>$titulo,
-        ];
-        if(isset($_GET['mbase'])){
-            $config['mes'] = base64_decode($_GET['mbase']);
-        }
-        if(isset($dadosmeu_cadastro['id'])){
-            $config['id'] = $dadosmeu_cadastro['id'];
-        }
-        $config['media'] = [
-            'files'=>'jpeg,jpg,png,pdf,PDF',
-            'select_files'=>'unique',
-            'field_media'=>'post_parent',
-            'post_parent'=>$post_id,
-        ];
-        $listFiles = false;
-        $campos = $this->campos($dadosmeu_cadastro);
-
-        $ret = [
-            'value'=>$dadosmeu_cadastro,
-            'config'=>$config,
-            'title'=>$title,
-            'titulo'=>$titulo,
-            'listFiles'=>$listFiles,
-            'campos'=>$campos,
-            'exec'=>true,
-        ];
-        return view('site.user.edit',$ret);
-    }
-    /**
-     * Metodo para chamar a viw de seleção de tipo de usuario que se cadaastra no site
-     */
-    public function painel_select_user_site($post_id=false,$dados=false){
-        if(!$dados && $post_id){
-
-            $dados = Post::Find($post_id);
-        }
-        $title = __('Selecione seu perfil de usuário');
-        $titulo = $title;
-        $config['media'] = [
-            'files'=>'jpeg,jpg,png,pdf,PDF',
-            'select_files'=>'unique',
-            'field_media'=>'post_parent',
-            'post_parent'=>$post_id,
-        ];
-        $ret = [
-            // 'value'=>$dadosmeu_cadastro,
-            'config'=>$config,
-            'title'=>$title,
-            'titulo'=>$titulo,
-            // 'listFiles'=>$listFiles,
-            // 'campos'=>$campos,
-            'exec'=>true,
-        ];
-        return view('site.user.painel_select_user_site',$ret);
-    }
-    /**
-     * Metodo para checar se o usuario verificou seu email
-     */
-    public function is_verified(){
-        //uso (new UserController)->is_verified();
-        $user = Auth::user();
-        return $user->email_verified_at;
-    }
-    /**
-     * Metodo para plubicar dados dos usuario
-     * @param int $user_id
-     * @return array $ret
-     */
-    public function get_user_data($user_id){
-        return User::Find($user_id);
-    }
-    /**
-     * Metodo para Gerenciar o cadastro de usuarios peelo site
-     * @param int $id_pagina,$dp= dados de postagem da página
-     * @return string $ret
-     */
-    public function ger_user($id_pagina=false,$dp=false){
-        $seg1 = request()->segment(1);
-        $seg2 = request()->segment(2);
-        $seg3 = request()->segment(3);
-
-        if(!$seg2){
-            if(Qlib::isAdmin(3)){
-                return $this->get_users_site();
-            }else{
-                return redirect()->to('/meu-cadastro');
-            }
-        }elseif($seg2=='create' && $seg3!=null){
-            //Criar usuario
-            return $this->form_meu_cadastro($id_pagina,$dp);
-        }elseif($seg2=='create'){
-            //Exibir uma tela seleção de timpo de usuario
-            if(Qlib::is_repasses()){
-                return $this->form_meu_cadastro($id_pagina,$dp);
-            }else{
-                return $this->painel_select_user_site($id_pagina,$dp);
-            }
-        }elseif($seg2=='edit'){
-            //editar usuario
-        }elseif($seg2=='show'){
-            //visualizar usuario
-
-        }elseif($seg2=='remove'){
-            //excluir usuario
-        }
-        $ret = $seg2;
-
-        return $ret;
-    }
-    /**
-     * Metodo para logar cliente apos cadastro de usuario no site tbme envia um email de verificação
-     */
-    public function after_cad_user_site(Request $request){
-        $ret = false;
-        if($request){
-            $ret = $this->authenticate($request);
-        }
-        return $ret;
-    }
-    /**
-     * Handle an authentication attempt.
-     */
-    public function authenticate(Request $request)    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-        $ret['exec'] = false;
-        $ret['mens'] = false;
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            $ret['exec'] = true;
-            // return redirect()->intended('dashboard');
-        }else{
-            $ret['mens'] = 'Invalid';
-            // return back()->withErrors([
-            //     'email' => 'The provided credentials do not match our records.',
-            // ])->onlyInput('email');
-        }
-        return $ret;
-
-    }
-    /**
-     * Metodo para verifica usuaior unico basedo em cpf ou email
-     * @param string $campo = o campo a ser verificado,strin $value=valor a ser verificado, integer $id opcional se for informado ele ignora o usuario com esse $id
-     * @return boolean
-     */
-    public function is_user_exist($campo,$value,$id=false){
-        $ret = false;
-        if($campo && $value){
-            if($id){
-                $ver = User::where($campo,$value)->where('id','!=',$id)->where('excluido','n')->where('deletdo','n')->get();
-                if($ver->count()){
-                    $ret = $ver->count();
-                }
-            }else{
-                $ver = User::where($campo,$value)->where('excluido','n')->where('deletdo','n')->get();
-                if($ver->count()){
-                    $ret = $ver->count();
-                }
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo que retorna id do primeiro administrados encontrado
-     */
-    public function get_first_admin(){
-        $id_permission_admin = Qlib::qoption('id_permission_admin')?Qlib::qoption('id_permission_admin'):1;
-        $d = User::where('id_permission','=',$id_permission_admin)->first();
-        // dd($d);
-        if($d->count()>0){
-            return $d['id'];
-        }
-    }
-    public function get_users_site(){
-
-    }
-    /**
-     * Metodo para retorna o total de usuarios cadastrados
-     */
-    public function total(){
-        $d = User::all()->count();
-        return $d;
-
-    }
-    //Metodo para montar um array contendo os ddi que estão na api do aeroclubejf
-    public function get_ddi(){
-        $ret = false;
-        $link_ddi = 'https://api.aeroclubejf.com.br/api/ddi';
-		$js_ddi = file_get_contents($link_ddi);
-		$ret = Qlib::lib_json_array($js_ddi);
-        return $ret;
-    }
-    /**
-     * Metodo para gerar um select de ddi
-     * @return string $input_ddi em html
-     */
-    public function ger_select_ddi($config=false){
-        $arr_ddi = $this->get_ddi();
-        $label = isset($config['label']) ? $config['label'] : '';
-        $dados = isset($config['dados']) ? $config['dados'] : [];
-        $ddi = isset($dados['config']['ddi']) ? $dados['config']['ddi'] : 55;
-        $telefonezap = isset($dados['config']['telefonezap']) ? $dados['config']['telefonezap'] : '';
-        $tmsel1 = '<select name="{name}" class="{class}" {event} id="{id}">{option}</select>';
-		$tmsel2 = '<option value="{value}" {selected}>{option_label}</option>';
-        $class_form = 'form-control';
-		if($arr_ddi && is_array($arr_ddi)){
-            // self::lib_print($arr_ddi);
-            if($tmsel1 && $tmsel2){
-                $opt = false;
-                foreach ($arr_ddi as $ki => $vi) {
-                    $opt .= str_replace('{value}',$vi['ddi'],$tmsel2);
-                    $option_label = $vi['pais'].' +'.$vi['ddi'];
-                    $selected = false;
-                    if($vi['ddi']==$ddi){
-                        $selected = 'selected';
-                    }
-                    $opt = str_replace('{option_label}',$option_label,$opt);
-                    $opt = str_replace('{selected}',$selected,$opt);
-                }
-            }
-            $input_zap = str_replace('{option}',$opt,$tmsel1);
-            $input_zap = str_replace('{name}','config[ddi]',$input_zap);
-            $input_zap = str_replace('{id}','ddi',$input_zap);
-            $cont_tel = '<input type="tel" value="'.$telefonezap.'" name="config[telefonezap]" required onblur="mask(this,clientes_mascaraTelefone);" onkeypress="mask(this,clientes_mascaraTelefone);" class="form-control" placeholder="Seu whatsapp" />';
-            $tms = '<div class="row"><div class="col-12"><label>'.$label.'</label></div><div class="col-3 pr-0">{cont_ddi}</div><div class="col-9 pl-0">{cont_tel}</div></div>';
-            $input_zap = str_replace('{cont_ddi}',$input_zap,$tms);
-            $input_zap = str_replace('{cont_tel}',$cont_tel,$input_zap);
-            $input_zap = str_replace('{class}',$class_form,$input_zap);
-            $input_zap = str_replace('{event}','',$input_zap);
-        }else{
-            $input_zap = false;
-        }
-        return $input_zap;
-    }
-    /**
-     * verifica se o sistema está cunfigurado para o usuario receber notificação de cadastro de nova conta
-     * @return boolean true|false
-     */
-    public function notific_new_user(){
-        $notific_new_user_add = Qlib::qoption('notific_new_user_add')?Qlib::qoption('notific_new_user_add'):'s';
-        if($notific_new_user_add=='s'){
-            return true;
-        }else{
-            return false;
-        }
-    }
-    /**
-     * Metodo para validar a escola na anac atraves do cnpj
-     * @param string $cnpj
-     * @return array
-     */
-    public function valida_escola(Request $request){
-        if($request->has('cnpj')){
-            $cnpj = $request->get('cnpj');
-        }else{
-            return ['recordsTotal'=>0];
-        }
-        $curl = curl_init();
-        // $cnpj = str_replace('.','',$cnpj);
-        // $cnpj = str_replace('/','',$cnpj);
-        // $cnpj = str_replace('-','',$cnpj);
-        $cnpj = preg_replace('/[^0-9]/', '', (string) $cnpj);
-        $data = ['filtros.cnpj'=>$cnpj];
-        // dd($cnpj);
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://sistemas.anac.gov.br/RBAC141/(X(1)S(bzf31g5fwxb2u1ujulqstrcg))/ciac/GetCiacsList',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS =>Qlib::lib_array_json($data),
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json',
-                'Cookie: TS01ef03de=016a5a6bebed3b8f740efb0b9d341ff728c6a72567f6b0a5da2c74e471d386524ba4d1c05f0b9b7c2559805ab1f2a9c0ba4f9ed6d2'
-            ),
-        ));
-        $response = curl_exec($curl);
-        curl_close($curl);
-        return Qlib::lib_json_array($response) ;
-    }
-    /**
-     * Metodo para gravar opre
-     */
-    public function pre_cadastro_escola(Request $request){
-        $ret['exec'] = false;
-        //Somente usuarios não logados pode acessar essa ares
-        if (Auth::check()) {
-            $ret['mens'] = Qlib::formatMensagem0('Ação não permitida para usuários logados','danger');
-            return $ret;
-        }
-
-        if($request->has('cnpj')){
-            $cnpj = $request->get('cnpj');
-            //verificar se o cadastro de um cnpj está incompleto.
-            $du = User::where('cnpj',$cnpj)->get();
-            if($du->count() > 0){
-                $dus = $du->toArray();$du=$dus[0];
-                //verificar se ja é um cadastro do sistema completo
-                if(isset($du['config']['origem']) && $du['config']['origem']=='precadastro'){
-                    //enviar para a proxima etapa de cadastro
-                    $ret['redirect'] = url('/user/create/pj/'.$du['token']);
-                    $ret['exec'] = true;
-                    return $ret;
-                }
-                //se for notificar para realizar login
-                // dd($du);
-            }
-            //Validar o cnpj
-            $validatedData = $request->validate([
-                'email' => ['required','string','unique:users'],
-                'cnpj'   =>[new RightCnpj,'required','unique:users']
-            ],[
-                'cnpj.unique'=>__('CNPJ já cadastrado'),
-                'email.unique'=>__('E-mail já cadastrado'),
-            ]);
-            // dd($request->all());
-            $resultado = Qlib::lib_json_array($this->valida_escola($request));
-            if(isset($resultado['recordsTotal']) && $resultado['recordsTotal']>0 && isset($resultado['data'])){
-                //salvar o precadastro com cnpj e o meta_user dados da validação
-                $request->merge([
-                    'config' => [
-                        'origem'=>'precadastro',
-                        'nome_fantasia'=>@$resultado['data'][0]['NomeFantasia'],
-                        'cidade'=>@$resultado['data'][0]['Cidade'],
-                        'uf'=>@$resultado['data'][0]['Estado'],
-                        'CodigoCiac'=>@$resultado['data'][0]['CodigoCiac'],
-                    ],
-                    // 'cnpj'=>$cnpj,
-                    'tipo_pessoa'=>'pj',
-                    'razao'=>@$resultado['data'][0]['RazaoSocial'],
-                    'meta'=>['validacao_anac'=>$resultado['data']]
-                ]);
-                // dd($request->all());
-                $salvar = $this->store($request);
-                if($salvar['exec'] && $salvar['idCad']){
-                    $token_user = Qlib::buscaValorDb0('users','id',$salvar['idCad'],'token');
-                    $ret['redirect'] = url('/user/create/pj/'.$token_user);
-                    $ret['exec'] = $salvar['exec'];
-                }
-                $ret['salvar'] = $salvar;
-            }else{
-                //informar que este CNPJ não está cadastrado na ANAC
-                // dump($resultado);
-                $ret['mens'] = Qlib::formatMensagem0('Este CNPJ não está cadastrado na ANAC','danger');
-                $ret['exec'] = false;
-            }
-            $ret['resultado'] = $resultado;
         }
         return $ret;
     }

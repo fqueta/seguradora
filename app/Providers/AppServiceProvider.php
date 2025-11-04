@@ -29,6 +29,28 @@ class AppServiceProvider extends ServiceProvider
     public function boot(Dispatcher $events)
     {
         Paginator::useBootstrap();
+        /*
+        $events->listen(BuildingMenu::class, function (BuildingMenu $event ) {
+
+            $items['menus'] = app(Menu::class)::where('actived',true)->
+            where('pai','')->
+            get()->map(function(Menu $menu){
+                $ret = [
+                    'key'    =>  $menu['url'].'-'.$menu['id'],
+                    'text'   =>  $menu['description'],
+                    'route'  =>  [$menu['url'].'.index',['id'=>$menu['id']]],
+                    'active' =>  [$menu['url'].'/'.$menu['id'].'/*'],
+                    'icon'   =>  $menu['icon'],
+                ];
+
+                return $ret;
+            });
+            //dd($items);
+            $event->menu->addAfter('painel',
+                ...$items['menus']
+            );
+        });
+        */
 
         $events->listen(BuildingMenu::class, function (BuildingMenu $event) {
            $ret = $this->exibeMenu($event);

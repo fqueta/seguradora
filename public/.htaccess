@@ -18,4 +18,13 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+    # permissões da API
+    <LimitExcept GET POST PUT DELETE>
+        Deny from all
+    </LimitExcept>
+
+    <Limit GET POST DELETE>
+        Require all granted
+    </Limit>
+
 </IfModule>

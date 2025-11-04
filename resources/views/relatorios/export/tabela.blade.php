@@ -32,7 +32,7 @@
                                     $td = false;
                                     if(is_array($arr)){
                                         foreach ($arr as $k => $v) {
-                                            $td .= @$vd['arr_opc'][$v].',';
+                                            $td .= $vd['arr_opc'][$v].',';
                                         }
                                     }
                                 @endphp

@@ -1,7 +1,7 @@
 <!-- Modal -->
 
 <div class="col-md-12">
-    <div class="card">
+    <div class="card card-primary card-outline">
         <div class="card-header">
             <h5 class="card-title">{{__('Pesquisar cadastros')}}</h5>
             <div class="card-tools">
@@ -13,42 +13,32 @@
         <div class="card-body">
             <!--<form action="" method="GET">-->
                 <div class="row">
-                    @if (isset($campos_tabela) && is_array($campos_tabela))
+                    @if (isset($campos_tabela))
                         @foreach ($campos_tabela as $kbu=>$vbu)
-                            @if (isset($vbu['active']) && $vbu['active'])
+                            @if ($vbu['active'])
                                 @php
-                                    if($vbu['type']!='text' && ($kbu=='id' || $kbu=='ID')){
+                                    if($vbu['type']!='text' && $kbu=='id'){
                                         $vbu['type'] = 'text';
                                     }
                                     if($vbu['type']=='hidden_text'){
                                         $vbu['type'] = 'text';
                                     }
-                                    if($vbu['type']=='chave_checkbox'){
-                                        // $_GET['filter'][$kbu] = isset($_GET['filter'][$kbu]) ? $_GET['filter'][$kbu] : @$vbu['valor_padrao'];
-                                    }
-                                    // if($kbu!='obs')
-                                    //     $vbu['tam'] = 3;
+                                    if($kbu!='obs')
+                                        $vbu['tam'] = 3;
                                     $cp_busca = isset($vbu['cp_busca'])?$vbu['cp_busca']:$kbu;
-                                    $type = isset($vbu['type'])?$vbu['type']:'text';
-                                    if($type == 'hidden'){
-                                        $type = 'text';
-                                    }
                                 @endphp
                                 {{App\Qlib\Qlib::qForm([
-                                    'type'=>$type,
+                                    'type'=>isset($vbu['type'])?$vbu['type']:'text',
                                     'campo'=>'filter['.$cp_busca.']',
                                     'placeholder'=>isset($vbu['placeholder'])?$vbu['placeholder']:'',
                                     'label'=>$vbu['label'],
                                     'ac'=>'alt',
                                     'value'=>@$_GET['filter'][$kbu],
-                                    'valor_padrao'=>@$vbu['valor_padrao'],
-                                    // 'tam'=>isset($vbu['tam'])?$vbu['tam']:'3',
-                                    'tam'=>'6',
+                                    'tam'=>isset($vbu['tam'])?$vbu['tam']:'3',
                                     'class_div'=>$vbu['exibe_busca'],
-                                    'event'=>isset($vbu['event_busca'])?$vbu['event_busca']:'',
+                                    'event'=>isset($vbu['event'])?$vbu['event']:'',
                                     'arr_opc'=>isset($vbu['arr_opc'])?$vbu['arr_opc']:'',
                                     'label_option_select'=>'Todas',
-                                    'checked'=>@$_GET['filter'][$kbu],
                                 ])}}
                             @endif
 

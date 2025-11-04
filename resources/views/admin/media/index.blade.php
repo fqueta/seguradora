@@ -39,7 +39,7 @@
                             </span>
                         </div>
                         <div class="col-12 grid-media-files">
-                            <img class="w-100" src="/storage/{{$v['guid']}}" alt="{{$v['post_name']}}" />
+                            <img class="w-100" src="{{tenant_asset($v['guid'])}}" alt="{{$v['post_name']}}" />
                         </div>
                         {{-- <div class="col-12">
                             {{$v['post_name']}}

@@ -9,6 +9,9 @@ use Illuminate\Notifications\Notifiable;
 class Documento extends Model
 {
     use HasFactory,Notifiable;
+    protected $casts = [
+        'config' => 'array',
+    ];
     protected $fillable = [
         'token',
         'nome',
@@ -16,6 +19,7 @@ class Documento extends Model
         'tipo',
         'ativo',
         'autor',
+        'config',
         'conteudo',
         'excluido',
         'reg_excluido',

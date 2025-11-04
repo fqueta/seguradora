@@ -1,20 +1,15 @@
+@php
+    $compleUrl = isset($config['compleUrl']) ? $config['compleUrl'] : '';
+@endphp
 <script>
     $(function(){
+        $("#{{$config['frm_id']}}").validate({
+            submitHandler: function(form) {
+                submitFormulario($("#{{$config['frm_id']}}"),function(res){
 
-        $('[type="submit"]').on('click',function(e){
-            e.preventDefault();
-            let btn_press = $(this).attr('btn');
-            @if (App\Qlib\Qlib::qoption('editor_padrao')=='laraberg')
-                let content = Laraberg.getContent();
-                let compleurl = '&post_content='+content+'&'+$('#imagem-detacada').serialize();
-            @else
-                let compleurl = '';
-            @endif
-
-            submitFormulario($('#{{$config['frm_id']}}'),function(res){
-                try {
+                    let btn_press = $('#btn-press-salv').html();
+                    lib_formatMensagem('.mens',res.mens,res.color);
                     if(res.exec){
-                        lib_formatMensagem('.mens',res.mens,res.color);
                     }
                     if(btn_press=='sair'){
                         if(pop){
@@ -23,6 +18,7 @@
                                 return;
                         }
                         var redirect = $('[btn-volter="true"]').attr('redirect');
+
                         if(redirect){
                             if(pop){
                                 window.opener.popupCallback(function(){
@@ -31,15 +27,7 @@
                                 window.close(); // Close the current popup
                                 return;
                             }else{
-                                try {
-                                    if(res.redirect){
-                                        window.location = res.redirect;
-                                        return;
-                                    }
-                                } catch (error) {
-                                    window.location = redirect;
-                                    console.log(error);
-                                }
+                                window.location = redirect;
                             }
                         }else if(res.return){
                             if(pop){
@@ -61,16 +49,25 @@
                         alert('erros');
                         console.log(res.errors);
                     }
+                },function(res){
+                    lib_funError(res);
+                },'&'+$('#files').serialize());
+                /*
+                $(form).submit(function(e){
+                    e.preventDefault();
 
-                } catch (e) {
-                    console.log(e);
-                }
-            },function(res){
-                if(res.errors){
-                    alert('erros');
-                    console.log(res.errors);
-                }
-            },compleurl);
+                });
+                */
+
+            }
+        });
+        function btnPres(obj){
+            $('#btn-press-salv').remove();
+            var btn = '<span id="btn-press-salv" class="d-none">'+obj.attr('btn')+'</span>';
+            $(btn).insertAfter(obj);
+        }
+        $('[type="submit"]').on('click',function(e){
+            btnPres($(this));
         });
     });
 </script>

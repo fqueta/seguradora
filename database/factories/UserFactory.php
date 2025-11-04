@@ -2,9 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\Hash;
 class UserFactory extends Factory
 {
     /**
@@ -12,20 +13,32 @@ class UserFactory extends Factory
      *
      * @return array
      */
+    protected $model = User::class;
      public function definition()
      {
          $email = $this->faker->unique()->safeEmail();
          $gender = $this->getGender();
+        //  dd($email);
          return [
-             'name' => $this->faker->name($gender),
-             'email' => $email,
-             'email_verified_at' => now(),
-             'password' => bcrypt($email), // email
-             'remember_token' => Str::random(10),
-             'status' => $this->getStatus(),
-             'gender' => $gender,
-             'profile' => $this->getProfile(),
+            'nome' => $this->faker->name($gender),
+            'email' => $email,
+            'password' => Hash::make('mudar123'),
+            'status' => 'actived',
+            'verificado' => 'n',
+            'id_permission' => '2',
          ];
+        //  'nome' => $this->faker->name($gender),
+        //     'email' => $email,
+        //     'email_verified_at' => now(),
+        //     'password' => Hash::make('ferqueta'),
+        //     'remember_token' => Str::random(10),
+        //     // 'status' => $this->getStatus(),
+        //     'status' => 'actived',
+        //     // 'gender' => $gender,
+        //     // 'profile' => $this->getProfile(),
+        //     'verificado' => 'n',
+        //     'id_permission' => '2',
+
      }
 
      /**

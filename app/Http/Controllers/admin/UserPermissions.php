@@ -19,8 +19,9 @@ class UserPermissions extends Controller
     public $label;
     public $view;
     public $tab;
-    public function __construct(User $user)
+    public function __construct()
     {
+        $user = Auth::user();
         $this->middleware('auth');
         $this->user = $user;
         $this->routa = 'permissions';
@@ -108,7 +109,7 @@ class UserPermissions extends Controller
             'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
             'name'=>['label'=>'Nome da permissão','active'=>true,'placeholder'=>'Ex.: Cadastrados','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'12'],
             'token'=>['label'=>'token','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
-            'active'=>['label'=>'Liberar','active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'3','arr_opc'=>['s'=>'Sim','n'=>'Não']],
+            'active'=>['label'=>'Liberar','tab'=>$this->tab,'active'=>true,'type'=>'chave_checkbox','value'=>'s','checked'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'3','arr_opc'=>['s'=>'Sim','n'=>'Não']],
             'redirect_login'=>['label'=>'link da pagina','active'=>false,'type'=>'text','exibe_busca'=>'d-none','event'=>'','tam'=>'12'],
             'description'=>['label'=>'Observação','active'=>false,'type'=>'textarea','exibe_busca'=>'d-block','event'=>'','tam'=>'12'],
             'id_menu'=>['label'=>'lista de Permissões','active'=>false,'type'=>'html','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'permissions.check_permissao','dados'=>@$dados['id_menu']],
@@ -178,7 +179,7 @@ class UserPermissions extends Controller
         $dados['active'] = isset($dados['active'])?$dados['active']:'n';
         $dados['id_menu'] = isset($dados['id_menu'])?$dados['id_menu']:[];
 
-        //dd($dados);
+        // dd($dados);
         $salvar = Permission::create($dados);
         $route = $this->routa.'.index';
         $ret = [
@@ -349,5 +350,11 @@ class UserPermissions extends Controller
             $ret = redirect()->route($routa.'.index',['mens'=>'Registro deletado com sucesso!','color'=>'success']);
         }
         return $ret;
+    }
+    /**
+     * Retorna a permissão do usuario logado
+     */
+    public function my_permission(){
+        return (int)Auth::user()['id_permission'];
     }
 }

@@ -1,85 +1,89 @@
 @extends('adminlte::page')
 
-@section('title')
-{{config('app.name')}} {{config('app.version')}} - Painel
-@stop
-@section('footer')
-    @include('footer')
-@stop
+@section('title', 'Data Brasil - Painel')
 
 @section('content_header')
-
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h1 class="m-0">Painel</h1>
+    </div><!-- /.col -->
+    <div class="col-sm-6 text-right">
+        <div class="btn-group" role="group" aria-label="actions">
+            <a href="{{route('clientes.create')}}" class="btn btn-primary"><i class="fa fa-plus"></i> {{__('Novo cliente')}}</a>
+            <a href="{{route('clientes.index')}}" class="btn btn-secondary"><i class="fa fa-list"></i> {{__('Todos clientes')}}</a>
+            {{-- <a href="{{route('relatorios.social')}}" class="btn btn-dark"><i class="fa fa-chart-bar"></i> Ver relatórios</a> --}}
+        </div>
+    </div><!-- /.col -->
+</div>
 @stop
 
 @section('content')
-    @include('admin.partes.header')
-    {{-- <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1 class="m-0 tit-sep">Painel</h1>
-        </div>
-        <div class="col-sm-6 text-right">
-            <div class="btn-group" role="group" aria-label="actions">
-                <a href="https://cmd.databrasil.app.br/familias/create" class="btn btn-primary"><i class="fa fa-plus"></i> Novo cadastro</a>
-                <a href="https://cmd.databrasil.app.br/familias" class="btn btn-secondary"><i class="fa fa-list"></i> Ver cadastros</a>
+<!--<p>Welcome to this beautiful admin panel.</p>-->
+@can('ler','relatorios')
+<div class="row card-top">
+    @if (isset($config['c_posts']['cards_home']))
+    @foreach ($config['c_posts']['cards_home'] as $k=>$v)
+    <div class="col-lg-{{$v['lg']}} col-{{$v['xs']}}">
+                <!-- small box -->
+                <div class="small-box bg-{{$v['color']}}">
+                  <div class="inner">
+                    <h3>{{$v['valor']}}</h3>
+
+                    <p>{{$v['label']}}</p>
+                  </div>
+                  <div class="icon">
+                    <i class="{{$v['icon']}}"></i>
+                  </div>
+                  <a href="{{$v['href']}}" class="small-box-footer">Visualizar <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+              </div>
+            @endforeach
+        @endif
+    </div>
+
+    <div class="row mb-5">
+        @if (isset($config['c_posts']['progresso']))
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Progresso dos cadastros</strong>
+                </div>
+                <div class="card-body">
+                    @foreach ($config['c_posts']['progresso'] as $k=>$v)
+                        <div class="progress-group">
+                            {{$v['label']}}
+                            <span class="float-right"><b>{{$v['total']}}</b>/{{$v['geral']}}</span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar {{$v['color']}}" style="width: {{$v['porcento']}}%;"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
-    </div> --}}
-    <div class="row mb-2">
-        <div class="col-sm-6">
-            <h1 class="m-0 tit-sep">{{__('Painel')}}</h1>
-        </div>
-        <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{url('/')}}">Site</a></li>
-                <li class="breadcrumb-item active">{{__('Painel Admin')}}</li>
-            </ol>
+        @endif
+        <div class="col-md-7">
+            {{-- @if (isset($config['mapa']['config']))
+                {!! App\Http\Controllers\MapasController::exibeMapas($config['mapa']['config']) !!}
+            @endif --}}
         </div>
     </div>
-    @if (isset($config['card_top']) && is_array($config['card_top']))
-        <div class="row">
-            @foreach ($config['card_top'] as $ck=>$cardv)
-                <div class="col-lg-3 col-6">
-                    <div class="small-box {{$cardv['color']}}">
-                        <div class="inner">
-                            <h3>{{$cardv['value']}}</h3>
-                            <p>{{$cardv['label']}}</p>
-                        </div>
-                        <div class="icon">
-                            <i class="{{$cardv['icon']}}"></i>
-                        </div>
-                        <a href="{{$cardv['link']}}" {{@$cardv['event']}} class="small-box-footer">Saiba mais <i class="fas fa-arrow-circle-right"></i></a>
-                    </div>
-                </div>
-            @endforeach
+    @else
+    <div class="col-md-12">
 
-        </div>
-    @endif
+        <h4>Seja bem vindo ao painel caso não tenha a permissão de acesso, entre em contato com o suporte</h4>
+    </div>
 
-    {{-- <div class="row mb-2">
-        @include('admin.leilao.lista_leilao_terminado')
-        @include('admin.blacklist.cardpainel')
-    </div> --}}
+    @endcan
 
 
   </div>
-  <script>
-    // function buscaNp(){
-    //     document.getElementById('list-finalizados_filter').querySelector('input[type="search"]').innerHTML = 'Aguardando';
-    // }
-  </script>
 @stop
 
 @section('css')
     @include('qlib.csslib')
-    <style>
-        .tit-sep{
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-    </style>
 @stop
 
 @section('js')
     @include('qlib.jslib')
-    {{-- @include('mapas.jslib') --}}
 @stop

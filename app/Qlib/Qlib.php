@@ -1,22 +1,16 @@
 <?php
 namespace App\Qlib;
 
-use App\Http\Controllers\admin\EventController;
-use App\Http\Controllers\admin\PostController;
-use App\Http\Controllers\LeilaoController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\admin\PostsController;
+use App\Models\_upload;
+use App\Models\Documento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use App\Models\Permission;
-use App\Models\Post;
 use App\Models\Qoption;
-use Illuminate\Support\Str;
-use DateTime;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Config;
 
 class Qlib
 {
@@ -28,32 +22,6 @@ class Qlib
       }else{
         echo $data;
       }
-    }
-    /**
-     * Verifica se o usuario logado tem permissao de admin ou alguma expessífica
-     */
-    static function dataLocal(){
-        $dataLocal = date('d/m/Y H:i:s', time());
-        return $dataLocal;
-    }
-    static function dataLocalDb(){
-        $dtBanco = date('Y-m-d H:i:s', time());
-        return $dtBanco;
-    }
-    static function dataBanco(){
-        global $dtBanco;
-        $dtBanco = date('Y-m-d H:i:s', time());
-        return $dtBanco;
-    }
-    static function isAdmin($perm_admin = 2)
-    {
-        $user = Auth::user();
-
-        if(isset($user->id_permission) && $user->id_permission<=$perm_admin){
-            return true;
-        }else{
-            return false;
-        }
     }
     static public function qoption($valor = false, $type = false){
         //type é o tipo de respsta
@@ -91,6 +59,23 @@ class Qlib
 		}
 		return $ret;
 	}
+    static function ultimoDiaMes($mes,$ano){
+        $ultimo_dia = date("t", mktime(0,0,0,$mes,'01',$ano));
+        return $ultimo_dia;
+    }
+    static function documento($code,$select='conteudo'){
+        $ret = false;
+        $d = Documento::where('url','=',$code)->
+        where('ativo','=','s')->
+        where('excluido','=','n')->
+        where('deletado','=','n')->
+        select($select)->get();
+        if(isset($d[0]->$select)) {
+            $ret = $d[0]->$select;
+        }
+        return $ret;
+
+    }
   static function dtBanco($data) {
 			$data = trim($data);
 			if (strlen($data) != 10)
@@ -105,19 +90,12 @@ class Qlib
 			}
 			return $rs;
 	}
-  static function dataExibe($data=false) {
-        $rs=false;
-        if($data){
-           $val = trim(strlen($data));
+    static function dataExibe($data) {
+			$val = trim(strlen($data));
 			$data = trim($data);$rs = false;
-            $agulha   = '/';
-            $pos = strpos( $data, $agulha );
-            if ($pos != false) {
-                return $data;
-            }
 			if($val == 10){
 					$arr_data = explode("-",$data);
-					$data_banco = @$arr_data[2]."/".@$arr_data[1]."/".@$arr_data[0];
+					$data_banco = $arr_data[2]."/".$arr_data[1]."/".$arr_data[0];
 					$rs = $data_banco;
 			}
 			if($val == 19){
@@ -126,7 +104,6 @@ class Qlib
 					$data_banco = $arr_data[2]."/".$arr_data[1]."/".$arr_data[0];
 					$rs = $data_banco."-".$arr_inic[1] ;
 			}
-        }
 
 			return $rs;
 	}
@@ -153,9 +130,8 @@ class Qlib
             }else{
                 $preco_venda1 = str_replace(".", "", $preco);
                 $preco_venda1 = str_replace(",", ".", $preco_venda1);
-                $preco_venda1 = str_replace("R$", "", $preco_venda1);
             }
-            return (float)trim($preco_venda1);
+            return $preco_venda1;
     }
     static function isJson($string) {
 		$ret=false;
@@ -198,20 +174,14 @@ class Qlib
 	}
   static function decodeArray($arr){
 			$ret = false;
-			if(is_string($arr)){
+			if($arr){
 				//$ret = base64_encode(json_encode($arr));
 				$ret = base64_decode($arr);
-                $ret = json_decode($ret,true);
+				$ret = json_decode($ret,true);
 
 			}
 			return $ret;
 	}
-    static function codificarBase64($texto) {
-         return base64_encode(utf8_encode($texto));
-    }
-    static function decodificarBase64($textoCodificado) {
-        return utf8_decode(base64_decode($textoCodificado));
-    }
     static function qForm($config=false){
         if(isset($config['type'])){
             $config['campo'] = isset($config['campo'])?$config['campo']:'teste';
@@ -313,12 +283,12 @@ class Qlib
                             if($config['data_selector']['list'][$ki] && isset($config['data_selector']['table']) && is_array($config['data_selector']['table'])){
                                 foreach ($config['data_selector']['table'] as $key => $v) {
                                     if(isset($v['type']) && $v['type']=='arr_tab' && isset($config['data_selector']['list'][$ki][$key]) && isset($v['conf_sql'])){
-                                        $value = $config['data_selector']['list'][$ki][$key];
+                                        $valse = $config['data_selector']['list'][$ki][$key];
                                         $config['data_selector']['list'][$ki][$key.'_valor'] = Qlib::buscaValorDb([
                                             'tab'=>$v['conf_sql']['tab'],
                                             'campo_bus'=>$v['conf_sql']['campo_bus'],
                                             'select'=>$v['conf_sql']['select'],
-                                            'valor'=>$value,
+                                            'valor'=>$valse,
                                         ]);
                                     }
                                 }
@@ -347,11 +317,8 @@ class Qlib
             return false;
         }
     }
-    static function sql_array($sql, $ind, $ind_2, $ind_3 = '', $leg = '',$type=false,$debug=false){
+    static function sql_array($sql, $ind, $ind_2, $ind_3 = '', $leg = '',$type=false){
         $table = DB::select($sql);
-        if($debug){
-            echo $sql;
-        }
         $userinfo = array();
         if($table){
             //dd($table);
@@ -359,6 +326,9 @@ class Qlib
                 $table[$i] = (array)$table[$i];
                 if($ind_3 == ''){
                     $userinfo[$table[$i][$ind_2]] =  $table[$i][$ind];
+                }elseif($ind_3 == 'attr_data'){
+                    //neste caso vai retornar um array como valor para ser gravado em um optio de select como atributo dados
+                    $userinfo[$table[$i][$ind_2]] = ['option'=>$table[$i][$ind],'attr_data'=>self::encodeArray($table[$i])];
                 }elseif(is_array($ind_3) && isset($ind_3['tab'])){
                     /*É sinal que o valor vira de banco de dados*/
                     $sql = "SELECT ".$ind_3['campo_enc']." FROM `".$ind_3['tab']."` WHERE ".$ind_3['campo_bus']." = '".$table[$i][$ind_2]."'";
@@ -378,29 +348,6 @@ class Qlib
 
         return $userinfo;
     }
-    static function sql_distinct($tab='familias',$campo='YEAR(`data_exec`)',$order='ORDER BY data_exec ASC'){
-        $ret = DB::select("SELECT DISTINCT $campo As vl  FROM $tab $order");
-        return $ret;
-    }
-    static function formatMensagem0($mess='',$cssMes='',$event=false,$time=4000){
-        if(self::is_frontend()){
-            $mensagem = "<div class=\"alert alert-$cssMes alert-dismissable fade show\" role=\"alert\">
-                <button class=\"btn-close\" style=\"float:right\" type=\"button\" data-bs-dismiss=\"alert\" $event aria-hidden=\"true\"></button>
-                <i class=\"fa fa-info-circle\"></i>&nbsp;".__($mess)."
-            </div>";
-		}else{
-            $mensagem = "<div class=\"alert alert-$cssMes alert-dismissable\" role=\"alert\">
-            <button style=\"float:right\" class=\"close\" type=\"button\" data-dismiss=\"alert\" $event aria-hidden=\"true\">×</button>
-            <i class=\"fa fa-info-circle\"></i>&nbsp;".__($mess)."
-            </div>";
-        }
-        $mensagem .= "<script>
-                        setTimeout(function(){
-                            $('.alert').hide('slow');
-                        }, \"".$time."\");
-                    </script>";
-        return $mensagem;
-	}
     static function formatMensagem($config=false){
         if($config){
             $config['mens'] = isset($config['mens']) ? $config['mens'] : false;
@@ -412,27 +359,15 @@ class Qlib
         }
 	}
     static function formatMensagemInfo($mess='',$cssMes='',$event=false){
-		if(self::is_frontend()){
-            $mensagem = "<div class=\"alert alert-$cssMes alert-dismissable fade show\" role=\"alert\">
-                <button class=\"btn-close\" style=\"float:right\" type=\"button\" data-bs-dismiss=\"alert\" $event aria-hidden=\"true\"></button>
-                <i class=\"fa fa-info-circle\"></i>&nbsp;".__($mess)."
-            </div>";
-		}else{
-            $mensagem = "<div class=\"alert alert-$cssMes alert-dismissable\" role=\"alert\">
-            <button style=\"float:right\" class=\"close\" type=\"button\" data-dismiss=\"alert\" $event aria-hidden=\"true\">×</button>
-            <i class=\"fa fa-info-circle\"></i>&nbsp;".__($mess)."
-            </div>";
-        }
-        return $mensagem;
+		$mensagem = "<div class=\"alert alert-$cssMes alert-dismissable\" role=\"alert\"><button class=\"close\" type=\"button\" data-dismiss=\"alert\" $event aria-hidden=\"true\">×</button><i class=\"fa fa-info-circle\"></i>&nbsp;".__($mess)."</div>";
+		return $mensagem;
 	}
-    // static function formatMensagemInfo2($mess='',$cssMes='',$event=false){
-	// 	return $mensagem;
-	// }
     static function gerUploadAquivos($config=false){
         if($config){
             $config['parte'] = isset($config['parte']) ? $config['parte'] : 'painel';
             $config['token_produto'] = isset($config['token_produto']) ? $config['token_produto'] : false;
             $config['listFiles'] = isset($config['listFiles']) ? $config['listFiles'] : false; // array com a lista
+            $config['listFilesCode'] = isset($config['listFilesCode']) ? $config['listFilesCode'] : false; // array com a lista
             $config['time'] = isset($config['time']) ? $config['time'] : 4000;
             $config['arquivos'] = isset($config['arquivos']) ? $config['arquivos'] : false;
             if($config['listFiles']){
@@ -466,6 +401,44 @@ class Qlib
             return false;
         }
     }
+    static function gerUploadWp($config=false){
+        if($config){
+            $config['parte'] = isset($config['parte']) ? $config['parte'] : 'painel';
+            $config['token_produto'] = isset($config['token_produto']) ? $config['token_produto'] : false;
+            $config['listFiles'] = isset($config['listFiles']) ? $config['listFiles'] : false; // array com a lista
+            $config['time'] = isset($config['time']) ? $config['time'] : 4000;
+            $config['arquivos'] = isset($config['arquivos']) ? $config['arquivos'] : false;
+            if($config['listFiles']){
+                $tipo = false;
+                foreach ($config['listFiles'] as $key => $value) {
+                    if(isset($value['config'])){
+                        $arr_conf = Qlib::lib_json_array($value['config']);
+                        if(isset($arr_conf['extenssao']) && !empty($arr_conf['extenssao']))
+                        {
+                            if($arr_conf['extenssao'] == 'jpg' || $arr_conf['extenssao']=='png' || $arr_conf['extenssao'] == 'jpeg'){
+                                $tipo = 'image';
+                            }elseif($arr_conf['extenssao'] == 'doc' || $arr_conf['extenssao'] == 'docx') {
+                                $tipo = 'word';
+                            }elseif($arr_conf['extenssao'] == 'xls' || $arr_conf['extenssao'] == 'xlsx') {
+                                $tipo = 'excel';
+                            }else{
+                                $tipo = 'download';
+                            }
+                        }
+                        $config['listFiles'][$key]['tipo_icon'] = $tipo;
+                    }
+                }
+            }
+            if(isset($config['parte'])){
+                $view = 'qlib.uploads.painel_wp';
+                return view($view, ['config'=>$config]);
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
     static function formulario($config=false){
         if($config['campos']){
             $view = 'qlib.formulario';
@@ -484,8 +457,7 @@ class Qlib
     }
     static function listaTabela($config=false){
         if($config['campos_tabela']){
-            $fileLista = isset($config['fileLista'])?$config['fileLista']:'listaTabela';
-            $view = 'qlib.'.$fileLista;
+            $view = 'qlib.listaTabela';
             return view($view, ['conf'=>$config]);
         }else{
             return false;
@@ -494,21 +466,11 @@ class Qlib
     static function UrlAtual(){
         return URL::full();
     }
-    static function get_subdominio(){
-        $ret = false;
-        // $url = explode('?',self::UrlAtual());
-        $url = request()->getHost();
-        // $partesUrl = explode('.',$url[0]);
-        $partesUrl = explode('.',$url);
-        // $total = count($partesUrl);
-        if(isset($partesUrl[0])){
-            //$partHost = explode('.',$_SERVER["HTTP_HOST"]);
-            $ret = $partesUrl[0];
-        }
-        return $ret;
-    }
     static function ver_PermAdmin($perm=false,$url=false){
         $ret = false;
+        if(!Auth::check()){
+            return $ret;
+        }
         if(!$url){
             $url = URL::current();
             $arr_url = explode('/',$url);
@@ -516,14 +478,12 @@ class Qlib
         if($url && $perm){
             $arr_permissions = [];
             $logado = Auth::user();
-            if($logado){
-                $id_permission = $logado->id_permission;
-                $dPermission = Permission::findOrFail($id_permission);
-                if($dPermission && $dPermission->active=='s'){
-                    $arr_permissions = Qlib::lib_json_array($dPermission->id_menu);
-                    if(isset($arr_permissions[$perm][$url])){
-                        $ret = true;
-                    }
+            $id_permission = $logado->id_permission;
+            $dPermission = Permission::findOrFail($id_permission);
+            if($dPermission && $dPermission->active=='s'){
+                $arr_permissions = Qlib::lib_json_array($dPermission->id_menu);
+                if(isset($arr_permissions[$perm][$url])){
+                    $ret = true;
                 }
             }
         }
@@ -531,7 +491,7 @@ class Qlib
     }
     static public function html_vinculo($config = null)
     {
-        /**
+        /*
         Qlib::html_vinculo([
             'campos'=>'',
             'type'=>'html_vinculo',
@@ -598,17 +558,48 @@ class Qlib
         }
         return $ret;
     }
-    static public function buscaValorDb0($tab,$campo_bus,$valor,$select,$compleSql=false,$debug=false)
+    static public function dados_tab_SERVER($tab = null,$config=false)
     {
         $ret = false;
-        if($tab && $campo_bus && $valor && $select){
-            $sql = "SELECT $select FROM $tab WHERE $campo_bus='$valor' $compleSql";
-            if(isset($debug)&&$debug){
-                echo $sql;
+        if($tab){
+            $id = isset($config['id']) ? $config['id']:false;
+            $sql = isset($config['sql']) ? $config['sql']:false;
+            $dominio = Qlib::dominio();
+            $mysql = isset($config['mysql']) ? $config['mysql']:'mysql_ger';
+            if($sql){
+                $d = DB::connection($mysql)->select($sql);
+                $arr_list = $d;
+                $list = false;
+                foreach ($arr_list as $k => $v) {
+                    if(is_object($v)){
+                        $list[$k] = (array)$v;
+                        foreach ($list[$k] as $k1 => $v1) {
+                            if(Qlib::isJson($v1)){
+                                $list[$k][$k1] = Qlib::lib_json_array($v1);
+                            }
+                        }
+                    }
+                }
+                $ret = $list;
+                return $ret;
+            }else{
+                if($tab=='contas_usuarios' && $dominio){
+                    $obj_list = DB::connection($mysql)->table($tab)->where('dominio','=',$dominio)->get();
+                }else{
+                    if($id)
+                        $obj_list = DB::connection($mysql)->table($tab)->find($id);
+                }
             }
-            $d = DB::select($sql);
-            if($d)
-                $ret = $d[0]->$select;
+            if($obj_list->count()>0 && $list=$obj_list){
+                if(is_array($list)){
+                        foreach ($list as $k => $v) {
+                            if(Qlib::isJson($v)){
+                                $list[$k] = Qlib::lib_json_array($v);
+                            }
+                        }
+                    }
+                    $ret = $list;
+            }
         }
         return $ret;
     }
@@ -834,7 +825,6 @@ class Qlib
     static public function show_files(Array $config = null)
     {
         $ret = Qlib::formatMensagemInfo('Nenhum Arquivo','info');
-
         if($config['token']){
             $files = DB::table('_uploads')->where('token_produto',$config['token'])->get();
             if($files){
@@ -857,602 +847,38 @@ class Qlib
         }
         $id_permission = auth()->user()->id_permission;
         $dPermission = Permission::FindOrFail($id_permission);
-        $ret = Auth::user()->getRedirectRoute() ? Auth::user()->getRedirectRoute() : @$dPermission['redirect_login'];
-        // $ret = isset($dPermission['redirect_login']) ? $dPermission['redirect_login']: Auth::user()->getRedirectRoute();;
+        $ret = isset($dPermission['redirect_login']) ? $dPermission['redirect_login']:'/';
         return $ret;
     }
-    static function redirect($url,$time=10){
-        echo '<meta http-equiv="refresh" content="'.$time.'; url='.$url.'">';
-    }
-    static function verificaCobranca(){
-        //$f = new CobrancaController;
-        return false; //desativar por enquanto
-        $user = Auth::user();
-        $f = new UserController($user);
-        $ret = $f->exec();
-        return $ret;
-    }
-    static public function is_base64($str){
-        try
-        {
-            $decoded = base64_decode($str, true);
-
-            if ( base64_encode($decoded) === $str ) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-        catch(Exception $e)
-        {
-            // If exception is caught, then it is not a base64 encoded string
-            return false;
-        }
-    }
-    static function get_client_ip() {
-        $ipaddress = '';
-        if (isset($_SERVER['HTTP_CLIENT_IP']))
-            $ipaddress = $_SERVER['HTTP_CLIENT_IP'];
-        else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
-            $ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        else if(isset($_SERVER['HTTP_X_FORWARDED']))
-            $ipaddress = $_SERVER['HTTP_X_FORWARDED'];
-        else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
-            $ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
-        else if(isset($_SERVER['HTTP_FORWARDED']))
-            $ipaddress = $_SERVER['HTTP_FORWARDED'];
-        else if(isset($_SERVER['REMOTE_ADDR']))
-            $ipaddress = $_SERVER['REMOTE_ADDR'];
-        else
-            $ipaddress = 'UNKNOWN';
-        return $ipaddress;
-    }
-    /**
-     * Registra eventos no sistema
-     * @return bool;
+    /***
+     * Informa o ambiente da página aberta
+     * Ex.: routa que será aberta ao logar
+     *
      */
-    static function regEvent($config=false)
+    static function ambiente()
     {
-        //return true;
-        $ret = (new EventController)->regEvent($config);
-        return $ret;
-    }
-    static function get_thumbnail_link($post_id=false){
-        $ret = false;
-        if($post_id){
-            $dados = Post::Find($post_id);
-            $imgd = Post::where('ID', '=', $dados['post_parent'])->where('post_status','=','publish')->get();
-                if( $imgd->count() > 0 ){
-                    // dd($imgd[0]['guid']);
-                    $ret = Qlib::qoption('storage_path'). '/'.$imgd[0]['guid'];
-                }
-        }
-        return $ret;
-    }
-    static function get_the_permalink($post_id=false,$dados=false){
-        $ret = url('/');
-        if(!$dados && $post_id){
-            $dados = Post::Find($post_id);
-            if($dados->count() > 0){
-                $dados = $dados->toArray();
-            }
-        }
-        if($dados){
-            $seg1 = request()->segment(1);
-            if($seg1){
-                if($dados['post_type'] == 'leiloes_adm' && $seg1==self::get_slug_post_by_id(37)){
-                    $ret .= '/'.$seg1.'/'.$dados['ID'];
-                }
-            }
-            // dd($dados);
-            // $ret = 'link'
-            // $imgd = Post::where('ID', '=', $dados['post_parent'])->where('post_status','=','publish')->get();
-            //     if( $imgd->count() > 0 ){
-            //         // dd($imgd[0]['guid']);
-            //         $ret = Qlib::qoption('storage_path'). '/'.$imgd[0]['guid'];
-            //     }
-        }
-        return $ret;
-    }
-    // static function add_shortcode( $tag, $callback ) {
-    //     global $shortcode_tags;
-
-    //     if ( '' === trim( $tag ) ) {
-    //         _doing_it_wrong(
-    //             __FUNCTION__,
-    //             __( 'Invalid shortcode name: Empty name given.' ),
-    //             '4.4.0'
-    //         );
-    //         return;
-    //     }
-
-    //     if ( 0 !== preg_match( '@[<>&/\[\]\x00-\x20=]@', $tag ) ) {
-    //         _doing_it_wrong(
-    //             __FUNCTION__,
-    //             sprintf(
-    //                 /* translators: 1: Shortcode name, 2: Space-separated list of reserved characters. */
-    //                 __( 'Invalid shortcode name: %1$s. Do not use spaces or reserved characters: %2$s' ),
-    //                 $tag,
-    //                 '& / < > [ ] ='
-    //             ),
-    //             '4.4.0'
-    //         );
-    //         return;
-    //     }
-
-    //     $shortcode_tags[ $tag ] = $callback;
-    // }
-    static function short_code_global($content,$tag,$config=false){
-        $ret = $content;
-        if(is_array($config)){
-            foreach ($config as $key => $value) {
-                $ret = str_replace('['.$tag.' ac="'.$key.'"]',$value,$ret);
-            }
-        }
-        return $ret;
-    }
-    static function is_backend(){
-        $ret = false;
-        // $urlAt = Qlib::UrlAtual();
         $seg1 = request()->segment(1);
-        if($seg1 == 'admin'){
-            $ret = true;
+        $prefixo_admin = config('app.prefixo_admin');
+        $prefixo_site = config('app.prefixo_site');
+        if($seg1==$prefixo_admin){
+            return 'back';
+        }else{
+            return 'front';
         }
-        return $ret;
     }
-    static function is_frontend(){
-        $ret = false;
-        // $urlAt = Qlib::UrlAtual();
-        $seg1 = request()->segment(1);
-        if($seg1 != 'admin'){
-            $ret = true;
+    static function verificaArquivo($file,$tipo_permitido='jpg,png'){
+        $ret['exec']=false;
+        $ret['mens']=false;
+        $extension = $file->getClientOriginalExtension();
+        if($tipo_permitido){
+            $arr_extension = explode(',',$tipo_permitido);
         }
-        return $ret;
-    }
-    static function get_slug_post_by_id($post_id){
-        return self::buscaValorDb0('posts','ID', $post_id,'post_name');
-    }
-    public static function createSlug($str, $delimiter = '-'){
-
-        $slug = Str::slug($str);
-        return $slug;
-    }
-    static function diffDate($d1, $d2, $type='H', $sep='-')
-    {
-        // $d1 = explode($sep, $d1);
-        // $d2 = explode($sep, $d2);
-        $d1 = new DateTime($d1);
-        $d2 = new DateTime($d2);
-        if($sep=='-'){
-            $data1  = $d1->format('Y-m-d H:i:s');
-            $data2  = $d2->format('Y-m-d H:i:s');
-        }
-        $intervalo = $d1->diff( $d2 );
-        $ret = false;
-        // dd($intervalo);
-        switch ($type)
-        {
-            case 'A':
-            // $X = 31536000;
-            $ret = $intervalo->y;
-            break;
-            case 'M':
-            $X = 2592000;
-            break;
-            case 'D':
-            $X = 86400;
-            break;
-            case 'H':
-            // $X = 3600;
-            $ret = $intervalo->h + ($intervalo->days * 24);
-            break;
-            case 'MI':
-            $X = 60;
-            break;
-            default:
-            $X = 1;
-        }
-        return $ret;
-        // return floor( ( ( mktime(0, 0, 0, $d2[1], $d2[2], $d2[0]) - mktime(0, 0, 0, $d1[1], $d1[2], $d1[0] ) ) / $X ) );
-    }
-    /**
-     * Metodo para informar se o leilão está perto de termiar
-     * @param  $d1 data de fim datetime, $d2 data de hje datetime , $dias dias para o termino
-     * @return array $ret;
-     * @return string
-     */
-    static function quase_termino($d1, $d2=false,$dias=3) {
-        $d1 = new DateTime($d1);
-        $d2 = $d2 ? $d2 : Qlib::dataLocalDb();
-        $d2 = new DateTime($d2);
-
-        $data1  = $d1->format('Y-m-d H:i:s');
-        $data2  = $d2->format('Y-m-d H:i:s');
-        $intervalo = $d1->diff( $d2 );
-        $ret['color'] = 'text-success';
-        $ret['exec'] = false;
-        if($intervalo->d<$dias){
+        if(in_array($extension,$arr_extension)){
             $ret['exec'] = true;
-            $ret['color'] = 'text-danger';
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para monstrar a diferença entre datas
-     * @param  $d1 datetime, $d2 datetime
-     * @return string
-     */
-    static function diffDate2($d1, $d2,$label=false,$ab=false,$exibe_todo=false) {
-        $ret = false;
-        $d1 = new DateTime($d1);
-        $d2 = new DateTime($d2);
-        $data1  = $d1->format('Y-m-d H:i:s');
-        $data2  = $d2->format('Y-m-d H:i:s');
-        $intervalo = $d1->diff( $d2 );
-        if($ab){
-            if($intervalo->y){
-                $ret .=  $intervalo->y . " A,";
-            }
-            if($intervalo->m){
-                $ret .= $intervalo->m . " M,";
-            }
-            $ret .= "$label" . $intervalo->d . " d";
-            if(isset($intervalo->h)){
-                $ret .= ", " . $intervalo->h . " h";
-                if($exibe_todo)
-                $ret .= ' '.Qlib::dataExibe($data1);
-            }
-            if($intervalo->i){
-                $ret .= " e " . $intervalo->i . " m";
-            }
-
-            // dd($intervalo->interval);
         }else{
-            $ret .= "$label" . $intervalo->d . " dias";
-            if($intervalo->m){
-                $ret .= " e " . $intervalo->m . " meses";
-            }
-            if($intervalo->y){
-                $ret .= " e " . $intervalo->y . " anos.";
-            }
-            if($intervalo->h){
-                $ret .= ", " . $intervalo->h . " horas.";
-            }
-            if($intervalo->i){
-                $ret .= " e " . $intervalo->i . " minutos.";
-            }
-        }
-        // $datatime1 = new DateTime('2015/04/15 00:00:00');
-        // $datatime2 = new DateTime('2015/05/16 00:00:00');
-        return $ret;
-
-        // $diff = $datatime1->diff($datatime2);
-        // $horas = $diff->h + ($diff->days * 24);
-        // return $horas;
-    }
-    static function valor_moeda($val,$sig=false){
-
-        return $sig.number_format($val,2,',','.');
-    }
-    static function criptToken($token){
-        $ret = false;
-        if($token){
-            $pri = substr($token,0,3);
-            $seg = substr($token,-3);
-            $ret = $pri.'**************'.$seg;
+            $ret['mens'] = 'O Arquivo tipo '.$extension.' não é permitido!';
         }
         return $ret;
-    }
-    static function criptString($token){
-        $ret = false;
-        if($token){
-            $pri = mb_substr($token,0,2);
-            $seg = mb_substr($token,-2);
-            $ret = $pri.'*****'.$seg;
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para publicar de forma rápida o Nick name do usuario.
-     * @param int $user_id
-     * @return string $ret,
-     */
-    static function getNickName($user_id){
-        $d = (new UserController)->get_user_data($user_id);
-        $ret = false;
-        if(isset($d['name'])){
-            $n = explode(' ', $d['name']);
-            if(isset($n[0])){
-                $ret = $n[0];
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para salvar ou atualizar os meta posts
-     */
-    static function update_postmeta($post_id,$meta_key=null,$meta_value=null)
-    {
-        $ret = false;
-        $tab = 'postmeta';
-        if($post_id&&$meta_key&&$meta_value){
-            $verf = Qlib::totalReg($tab,"WHERE post_id='$post_id' AND meta_key='$meta_key'");
-            if($verf){
-                $ret=DB::table($tab)->where('post_id',$post_id)->where('meta_key',$meta_key)->update([
-                    'meta_value'=>$meta_value,
-                    'updated_at'=>self::dataBanco(),
-                ]);
-            }else{
-                $ret=DB::table($tab)->insert([
-                    'post_id'=>$post_id,
-                    'meta_value'=>$meta_value,
-                    'meta_key'=>$meta_key,
-                    'created_at'=>self::dataBanco(),
-                ]);
-            }
-            //$ret = DB::table($tab)->storeOrUpdate();
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para pegar os meta posts
-     */
-    static function get_postmeta($post_id,$meta_key=null,$string=null)
-    {
-        $ret = false;
-        $tab = 'postmeta';
-        if($post_id){
-            if($meta_key){
-                $d = DB::table($tab)->where('post_id',$post_id)->where('meta_key',$meta_key)->get();
-                if($d->count()){
-                    if($string){
-                        $ret = $d[0]->meta_value;
-                    }else{
-                        $ret = [$d[0]->meta_value];
-                    }
-                }else{
-                    $post_id = self::get_id_by_token($post_id);
-                    if($post_id){
-                        $ret = self::get_postmeta($post_id,$meta_key,$string);
-                    }
-                }
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para retornar o valor do campo post_content de um determindo post
-     * @param string $post_id
-     * @return string $resultado do post
-     */
-    static function get_post_content($post_id){
-        $ret = false;
-        $tab = 'posts';
-        $d = DB::table($tab)->select('post_content')->where('ID',$post_id)->get();
-        if($d->count()){
-            $ret = $d[0]->post_content;
-        }else{
-            $post_id = self::get_id_by_token($post_id);
-            if($post_id){
-                $ret = self::get_post_content($post_id);
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo buscar o post_id com o token
-     * @param string $token
-     * @return string $ret;
-     */
-    static function get_id_by_token($token)
-    {
-        if($token){
-            return Qlib::buscaValorDb0('posts','token',$token,'ID');
-        }
-    }
-    /**
-     * Metodo para salvar ou atualizar os meta users
-     */
-    static function update_usermeta($user_id,$meta_key=null,$meta_value=null)
-    {
-        $ret = false;
-        $tab = 'usermeta';
-        if($user_id&&$meta_key&&$meta_value){
-            $verf = Qlib::totalReg($tab,"WHERE user_id='$user_id' AND meta_key='$meta_key'");
-            if($verf){
-                $ret=DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->update([
-                    'meta_value'=>$meta_value,
-                    'updated_at'=>self::dataBanco(),
-                ]);
-            }else{
-                $ret=DB::table($tab)->insert([
-                    'user_id'=>$user_id,
-                    'meta_value'=>$meta_value,
-                    'meta_key'=>$meta_key,
-                    'created_at'=>self::dataBanco(),
-                ]);
-            }
-            //$ret = DB::table($tab)->storeOrUpdate();
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para pegar os meta users
-     */
-    static function get_usermeta($user_id,$meta_key=null,$string=null)
-    {
-        $ret = false;
-        $tab = 'usermeta';
-        if($user_id){
-            if($meta_key){
-                $d = DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->get();
-                if($d->count()){
-                    if($string){
-                        $ret = $d[0]->meta_value;
-                    }else{
-                        $ret = [$d[0]->meta_value];
-                    }
-                }
-            }
-        }
-        return $ret;
-    }
-    /**
-     * Metodo para formatar os dados das bando de dados Post
-     */
-    static function dataPost($dados=false){
-        if($dados){
-            foreach ($dados->getOriginal() as $kda => $vda) {
-                if($kda=='config'){
-                    $dados['config'] = Qlib::lib_json_array($vda);
-                }elseif($kda=='post_date'){
-                    if($vda=='1970-01-01 00:00:00'){
-                        $dados[$kda] = '0000-00-00 00:00:00';
-                    }
-                }elseif($kda=='post_date_gmt'){
-                    $dExec = explode(' ',$dados['post_date_gmt']);
-                    if(isset($dExec)){
-                        $dados['post_date_gmt'] = $dExec;
-                    }
-                }else{
-                    $dados[$kda] = $vda;
-                }
-            }
-        }
-        return $dados;
-    }
-    /**
-     * Metodo para calcular data de vencimento contando x dias a frente sem levar em conta o próxima dia útil
-     * @param string $data=data no formato d/m/Y, integer $dias=numero de dias a frente
-     * @return string $data1
-     */
-    static function CalcularVencimento($data,$dias,$formato = 'd/m/Y')
-    {
-        $novadata = explode("/",$data);
-        $dia = $novadata[0];
-        $mes = $novadata[1];
-        $ano = $novadata[2];
-        if ($dias==0)
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia,$ano));
-            return self::dtBanco($data1);
-        }
-        else
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia+$dias,$ano));
-            return self::dtBanco($data1);
-        }
-    }
-    /**
-     * Metodo para calcular data de vencimento contando x dias a frente levando em conta o próxima dia útil
-     * @param string $data=data no formato d/m/Y, integer $dias=numero de dias a frente
-     * @return string $data1
-     */
-    static function CalcularVencimento2($data,$dias,$formato = 'd/m/Y')
-    {
-        $novadata = explode("/",$data);
-        $dia = $novadata[0];
-        $mes = $novadata[1];
-        $ano = $novadata[2];
-        if ($dias==0)
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia,$ano));
-            return self::proximoDiaUtil(Qlib::dtBanco($data1), $formato);
-        }
-        else
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia+$dias,$ano));
-            return self::proximoDiaUtil(Qlib::dtBanco($data1), $formato);
-        }
-    }
-    /**
-     * Metodo para calcular data de vencimento contando x $meses a frente quando $retDiaUtl=true leva em conta o próxima dia útil
-     * @param string $data=data no formato d/m/Y, integer $meses=numero de meses a frente,string $formato=formato, boolean $retDiaUtil=para levar em conta o próxima dia util ou não
-     * @return string $data1
-     */
-    static function CalcularVencimentoMes($data,$meses,$formato = 'd/m/Y',$retDiaUtl=true)
-        {
-            $novadata = explode("/",$data);
-            $dia = $novadata[0];
-            $mes = $novadata[1];
-            $ano = $novadata[2];
-            if ($meses==0)
-            {
-                $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia,$ano));
-                return self::proximoDiaUtil(Qlib::dtBanco($data1), $formato);
-            }
-            else
-            {
-                $data1 = date('d/m/Y',mktime(0,0,0,$mes+$meses,$dia,$ano));
-                if($retDiaUtl)
-                    return self::proximoDiaUtil(Qlib::dtBanco($data1), $formato);
-                else
-                    return $data1;
-            }
-    }
-    /**
-     * Metodo para calcular data anterior contando da $data x dias para trás sem levar em conta o próxima dia útil
-     * @param string $data=data no formato d/m/Y, integer $dias=numero de dias a frente
-     * @return string $data1
-     */
-
-    static function CalcularDiasAnteriores($data,$dias=0,$formato = 'd/m/Y')
-    {
-        $novadata = explode("/",$data);
-        $dia = $novadata[0];
-        $mes = $novadata[1];
-        $ano = $novadata[2];
-        if ($dias==0)
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia,$ano));
-            return self::dtBanco($data1);
-        }
-        else
-        {
-            $data1 = date('d/m/Y',mktime(0,0,0,$mes,$dia-$dias,$ano));
-            return $data1;
-        }
-    }
-    static function proximoDiaUtil($data, $saida = 'd/m/Y') {
-        // Converte $data em um UNIX TIMESTAMP
-        $timestamp = strtotime($data);
-        // Calcula qual o dia da semana de $data
-        // O resultado será um valor numérico:
-        // 1 -> Segunda ... 7 -> Domingo
-        $dia = date('N', $timestamp);
-        // Se for sábado (6) ou domingo (7), calcula a próxima segunda-feira
-        if ($dia >= 6) {
-            $timestamp_final = $timestamp + ((8 - $dia) * 3600 * 24);
-        } else {
-        // Não é sábado nem domingo, mantém a data de entrada
-            $timestamp_final = $timestamp;
-        }
-        return date($saida, $timestamp_final);
-    }
-    static function get_company_data(){
-        $ret = self::lib_json_array(self::qoption('dados_empresa'));
-        return $ret;
-    }
-    /**
-     * Metodo para formatar um valor moeda para ser salvo no banco de dados
-     * @param string || double $preco
-     * @return string $data1
-     */
-    static function precoDbdase($preco){
-        $preco = str_replace('R$', '', $preco);
-        $preco = trim($preco);
-        $sp = substr($preco,-3,-2);
-        $sp2 = substr($preco,-2,-1);
-        if($sp=='.'){
-            $preco_venda1 = $preco;
-        }elseif($sp2 && $sp2=='.'){
-            $preco_venda1 = $preco;
-        }else{
-            $preco_venda1 = str_replace(".", "", $preco);
-            $preco_venda1 = str_replace(",", ".", $preco_venda1);
-        }
-        return $preco_venda1;
     }
     /**
      * MONTA UM ARRAY COM OPÇÕES DE SEXO
@@ -1500,69 +926,585 @@ class Qlib
         return $url_atual;
     }
     /**
-     * Metodo para retornar um link de edição no painel adiom do post
+     * Metodo para retornar o nome do subdominio o vazio caso não seja um subdominio
      */
-    static function get_link_edit_admin($post_id,$post=false,$slug='paginas'){
-        if(!$post && $post_id){
-            $post = post::Find($post_id);
-        }
-        $ret = config('app.url').'/admin/'.$slug.'/'.$post_id.'/edit?redirect='.Qlib::UrlAtual().'';
+    static function is_subdominio(){
+        $ret = explode('.', request()->getHost())[0];
         return $ret;
     }
-    /**
-     * Metodo retornar um array com os tipos de págnas e tipos de conteudos
-     * @param $type = tipos_paginas | tipos_conteudos
-     */
-    static function get_tipos($type='tipos_paginas'){
-        $json = self::qoption($type);
-        $ret = [];
-        if($json){
-            $ret = self::lib_json_array($json);
+    static function selectDefaultConnection($connection='mysql',$database){
+        if($connection=='tenant'){
+            $clone = config('database.connections.mysql');
+            $clone['database'] = $database;
+            Config::set('database.connections.tenant.database', $clone['database']);
+            Config::set('database.connections.tenant.username', $clone['username']);
+            Config::set('database.connections.tenant.password', $clone['password']);
+
+            // if(isset($conn['name']) && isset($conn['user']) && isset($conn['pass'])){
+            //     $db = isset($conn['name'])?$conn['name']:false;
+            //     $user = isset($conn['user'])?$conn['user']:false;
+            //     $pass = isset($conn['pass'])?$conn['pass']:false;
+            //     if($user && $db){
+            //     }
+            // }else{
+            //     $arr_tenancy = session()->get('tenancy');
+            //     if(isset($arr_tenancy['config']) && Qlib::isJson($arr_tenancy['config'])){
+            //         $arr_config=Qlib::lib_json_array($arr_tenancy['config']);
+            //         $db = isset($arr_config['name'])?$arr_config['name']:false;
+            //         $user = isset($arr_config['user'])?$arr_config['user']:false;
+            //         $pass = isset($arr_config['pass'])?$arr_config['pass']:false;
+            //         if($user && $db){
+            //             Config::set('database.connections.tenant.database', trim($db));
+            //             Config::set('database.connections.tenant.username', trim($user));
+            //             Config::set('database.connections.tenant.password', trim($pass));
+            //         }
+            //     }
+            // }
+            // $clone = config('database.connections.mysql');
+            // $clone['database'] = $db;
+            // Config::set('database.connections.'.$connection, $clone);
+
         }
-        return $ret;
+        DB::purge($connection);
+        DB::reconnect($connection);
+        DB::setDefaultConnection($connection);
+        // Config::set('database.default', $connection);
+        return DB::getDefaultConnection();
+
     }
     /**
-     * Metodo para verificar se estamos do ambiente do admin
+     * Metodo que verifica se a conexão atual é de um tenant ou não
      */
-    static function is_admin(){
-        $sec1=request()->segment(1);
-        if($sec1=='admin'){
+    static function is_tenant(){
+        $conn = DB::getDefaultConnection();
+        if($conn == 'tenant'){
             return true;
         }else{
             return false;
         }
     }
-    /**
-     * Metodo para identificar qual é o aplicativo se é o repasse ou o leilao;
-     */
-    static function is_repasses(){
-        $id_app = config('app.id_app');
-        if($id_app=='repasses'){
-            return true;
-        }else{
-            return false;
+    static function is_backend(){
+        $ret = false;
+        // $urlAt = Qlib::UrlAtual();
+        $seg1 = request()->segment(1);
+        if($seg1 == 'admin'){
+            $ret = true;
         }
+        return $ret;
     }
-    /**
-     * Metodo para baixar um arquivo remoto e salvar em disco do servidor
-     */
-    static function download_file($url=false,$caminhoSalvar=false){
-        $ret = ['exec'=>false,'mens'=>false,'color'=>'danger','status'=>false];
-        if($url && $caminhoSalvar){
-            $response = Http::get($url);
-            $delete = false;
-            if (Storage::exists($caminhoSalvar)) {
-                $delete = Storage::delete($caminhoSalvar);
-            }
-            if ($response->successful()) {
-                // Salvar no disco local
-                Storage::put($caminhoSalvar, $response->body());
-                $ret = ['exec'=>true,'mens'=>'Arquivo baixado e salvo com sucesso!','delete'=>$delete,'color'=>'success','status'=>$response->status()];
-            }else{
-                $ret = ['exec'=>false,'mens'=>'Erro ao baixar o arquivo remoto!','color'=>'danger','status'=>$response->status()];
-            }
+    static function is_frontend(){
+        $ret = false;
+        // $urlAt = Qlib::UrlAtual();
+        $seg1 = request()->segment(1);
+        if($seg1 != 'admin'){
+            $ret = true;
         }
         return $ret;
     }
 
+    static function get_slug_post_by_id($post_id){
+        return self::buscaValorDb0('posts','ID', $post_id,'post_name');
+    }
+    // public static function createSlug($str, $delimiter = '-'){
+
+    //     $slug = \Str::slug($str);
+    //     return $slug;
+    // }
+    static public function buscaValorDb0($tab,$campo_bus,$valor,$select,$compleSql=false,$debug=false)
+    {
+        $ret = false;
+        if($tab && $campo_bus && $valor && $select){
+            $sql = "SELECT $select FROM $tab WHERE $campo_bus='$valor' $compleSql";
+            if(isset($debug)&&$debug){
+                echo $sql;
+            }
+            $d = DB::select($sql);
+            if($d)
+                $ret = $d[0]->$select;
+        }
+        return $ret;
+    }
+    /**
+     * Verifica se o usuario logado tem permissao de admin ou alguma expessífica
+     */
+    static function dataLocal(){
+        $dataLocal = date('d/m/Y H:i:s', time());
+        return $dataLocal;
+    }
+    static function dataLocalDb(){
+        $dtBanco = date('Y-m-d H:i:s', time());
+        return $dtBanco;
+    }
+    static function dataBanco(){
+        global $dtBanco;
+        $dtBanco = date('Y-m-d H:i:s', time());
+        return $dtBanco;
+    }
+    static function isAdmin($perm_admin = 2)
+    {
+        $user = Auth::user();
+
+        if(isset($user->id_permission) && $user->id_permission<=$perm_admin){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    static function get_client_ip() {
+        $ipaddress = '';
+        if (isset($_SERVER['HTTP_CLIENT_IP']))
+            $ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+        else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+            $ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        else if(isset($_SERVER['HTTP_X_FORWARDED']))
+            $ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+        else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
+            $ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+        else if(isset($_SERVER['HTTP_FORWARDED']))
+            $ipaddress = $_SERVER['HTTP_FORWARDED'];
+        else if(isset($_SERVER['REMOTE_ADDR']))
+            $ipaddress = $_SERVER['REMOTE_ADDR'];
+        else
+            $ipaddress = 'UNKNOWN';
+        return $ipaddress;
+    }
+    /**
+     * Metodo buscar o post_id com o token
+     * @param string $token
+     * @return string $ret;
+     */
+    static function get_id_by_token($token)
+    {
+        if($token){
+            return Qlib::buscaValorDb0('posts','token',$token,'ID');
+        }
+    }
+    /**
+     * Metodo para salvar ou atualizar os meta posts
+     */
+    static function update_postmeta($post_id,$meta_key=null,$meta_value=null)
+    {
+        $ret = false;
+        $tab = 'postmeta';
+        if($post_id&&$meta_key&&$meta_value){
+            $verf = Qlib::totalReg($tab,"WHERE post_id='$post_id' AND meta_key='$meta_key'");
+            if($verf){
+                $ret=DB::table($tab)->where('post_id',$post_id)->where('meta_key',$meta_key)->update([
+                    'meta_value'=>$meta_value,
+                    'updated_at'=>self::dataBanco(),
+                ]);
+            }else{
+                $ret=DB::table($tab)->insert([
+                    'post_id'=>$post_id,
+                    'meta_value'=>$meta_value,
+                    'meta_key'=>$meta_key,
+                    'created_at'=>self::dataBanco(),
+                ]);
+            }
+            //$ret = DB::table($tab)->storeOrUpdate();
+        }
+        return $ret;
+    }
+
+    /**
+     * Metodo para pegar os meta posts
+     */
+    static function get_postmeta($post_id,$meta_key=null,$string=null)
+    {
+        $ret = false;
+        $tab = 'postmeta';
+        if($post_id){
+            if($meta_key){
+                $d = DB::table($tab)->where('post_id',$post_id)->where('meta_key',$meta_key)->get();
+                if($d->count()){
+                    if($string){
+                        $ret = $d[0]->meta_value;
+                    }else{
+                        $ret = [$d[0]->meta_value];
+                    }
+                }else{
+                    $post_id = self::get_id_by_token($post_id);
+                    if($post_id){
+                        $ret = self::get_postmeta($post_id,$meta_key,$string);
+                    }
+                }
+            }
+        }
+        return $ret;
+    }
+     /**
+     * Metodo para salvar ou atualizar os meta users
+     */
+    static function update_usermeta($user_id,$meta_key=null,$meta_value=null)
+    {
+        $ret = false;
+        $tab = 'usermeta';
+        if($user_id&&$meta_key&&$meta_value){
+            $verf = Qlib::totalReg($tab,"WHERE user_id='$user_id' AND meta_key='$meta_key'");
+            if($verf){
+                $ret=DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->update([
+                    'meta_value'=>$meta_value,
+                    'updated_at'=>self::dataBanco(),
+                ]);
+            }else{
+                $ret=DB::table($tab)->insert([
+                    'user_id'=>$user_id,
+                    'meta_value'=>$meta_value,
+                    'meta_key'=>$meta_key,
+                    'created_at'=>self::dataBanco(),
+                ]);
+            }
+            //$ret = DB::table($tab)->storeOrUpdate();
+        }
+        return $ret;
+    }
+    /**
+     * Metodo para pegar os meta users
+     */
+    static function get_usermeta($user_id,$meta_key=null,$string=null)
+    {
+        $ret = false;
+        $tab = 'usermeta';
+        if($user_id){
+            if($meta_key){
+                $d = DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->get();
+                if($d->count()){
+                    if($string){
+                        $ret = $d[0]->meta_value;
+                    }else{
+                        $ret = [$d[0]->meta_value];
+                    }
+                }
+            }
+        }
+        return $ret;
+    }
+    /**
+     * remove meta datao
+     */
+    static function delete_usermeta($user_id,$meta_key=null)
+    {
+        return  DB::table('usermeta')->where('user_id',$user_id)->where('meta_key',$meta_key)->delete();
+    }
+    static function explodeReturnPrimeiro($separador,$string){
+        $dados = explode($separador,$string);
+        if(is_array($dados)){
+            return $dados[0];
+        }
+    }
+    static function select_text_em_html($string,$start,$end){
+        $ret = false;
+        $dados = explode($start,$string);
+        if(is_array($dados)){
+            foreach($dados As $key=>$valor){
+                if($key>0)
+                    $ret[$key] = self::explodeReturnPrimeiro($end,$valor);
+                //$str2 = substr(substr($string, stripos($string, $start)), strlen($start));
+                //$b = stripos($str2, $end);
+
+            }
+        }
+        return $ret;
+        //return trim(substr($str2, 0, $b));
+    }
+    static function shortCode_html($string){
+        $arr_texto = self::select_text_em_html($string,'*|','|*');
+        if(is_array($arr_texto)){
+            foreach($arr_texto As $key=>$val){
+                $string = str_replace('*|'.$val.'|*',(new PostsController)->short_code($val),$string);
+            }
+        }
+        return $string;
+    }
+    /**
+     * Retorna um link da logo1 do site
+     */
+    static function get_link_logo($val=0){
+        $tenant = tenant();
+        $ret = false;
+        if($tenant){
+            $logo = _upload::select('id', 'nome as name','pasta as link' , 'ordem as ordenar', 'config')->where('token_produto','=',$tenant['id'])->orderBy('ordem','asc')->get();
+            if(isset($logo[$val]['link']) && !empty($logo[$val]['link'])){
+                $ret = tenant_asset($logo[$val]['link']);
+            }
+        }
+        return $ret;
+    }
+    /**
+     * retorna um array de todas as midias gravadas no cadastro da empresa
+     */
+    static function get_midias_site($val=null){
+        $tenant = tenant();
+        $ret = false;
+        if($tenant){
+            $midias = _upload::select('id', 'nome as name','pasta as link' , 'ordem as ordenar', 'config')->where('token_produto','=',$tenant['id'])->orderBy('ordem','asc')->get();
+            if($val!=null){
+                if(isset($midias[$val]['link']) && !empty($midias[$val]['link'])){
+                    $ret = tenant_asset($midias[$val]['link']);
+                }
+            }else{
+                if($midias->count()>0){
+                    $midias = $midias->toArray();
+                    foreach ($midias as $k => $value) {
+                        $ret[$k] = tenant_asset($value['link']);
+                    }
+                }
+            }
+        }
+        return $ret;
+    }
+    /**
+     * retornar listas de anos de determinada consulta por padrao traz anos das licitações
+     * @param string $tab='biddings',$campo='YEAR(`data_exec`)',$order='ORDER BY data_exec ASC'
+     */
+    static function sql_distinct($tab='biddings',$campo='year',$valor='vl',$order='ORDER BY year ASC',$debug=false){
+        $sql = "SELECT DISTINCT $campo As $valor  FROM $tab $order";
+        if($debug){
+            echo $sql;
+        }
+        $ret = DB::select($sql);
+        return $ret;
+    }
+    /**
+     * Metodo padrão para gravar e atualizar qualquer tabela
+     * @param string $tab nome da tabela para ser cadastrado os dados
+     * @param array $dados array contendo os nomes de campos com seus respectivos valores..
+     * @param bool $edit opções false| true controla a Edição ou não edição de um registro encontrado, caso     encontre um registro similar a opão false somente informa que o registro foi encontrado true pode alterar
+     */
+    static function update_tab($tab='',$dados=[],$where='',$edit=true){
+        // $dados = [
+        //     'Nome' => 'Maria',
+        //     'Email' => 'maria@example.com',
+        //     'token' => uniqid(),
+        //     'senha' => bcrypt('senha_secreta')
+        // ];
+        //veriricar se ja existe
+        $ret['exec'] = false;
+        $ret['mens'] = 'Erro ao salvar';
+        $ret['color'] = 'danger';
+        try {
+            if(is_array($dados)){
+                if(!empty($where)){
+                    $d = DB::select("SELECT id FROM $tab $where");
+                    $id = isset($d[0]->id) ? $d[0]->id : null;
+                    if($id){
+                        if($edit){
+                            $salva = DB::table($tab)->where('id', $id)->update($dados);
+                            if($salva){
+                                $ret['exec'] = true;
+                                $ret['idCad'] = $id;
+                                $ret['dados'] = $dados;
+                                $ret['color'] = 'success';
+                                $ret['mens'] = 'Registro atualizado com sucesso!';
+                            }else{
+                                $ret['exec'] = true;
+                                $ret['idCad'] = $id;
+                                $ret['dados'] = $dados;
+                                $ret['color'] = 'success';
+                                $ret['mens'] = 'Registro sem necessidade de atualização!';
+                            }
+                        }else{
+                            $ret['exec'] = false;
+                            $ret['idCad'] = $id;
+                            $ret['dados'] = $dados;
+                            $ret['color'] = 'warning';
+                            $ret['mens'] = 'Registro encotrado!';
+                        }
+                    }else{
+                        $id = DB::table($tab)->insertGetId($dados);
+                        if($id){
+                            $ret['exec'] = true;
+                            $ret['idCad'] = $id;
+                            $ret['dados'] = $dados;
+                            $ret['color'] = 'success';
+                            $ret['mens'] = 'Registro criado com sucesso!';
+                        }
+                    }
+                }else{
+                    $id = DB::table($tab)->insertGetId($dados);
+                    if($id){
+                        $ret['exec'] = true;
+                        $ret['idCad'] = $id;
+                        $ret['dados'] = $dados;
+                        $ret['color'] = 'success';
+                        $ret['mens'] = 'Registro criado com sucesso!';
+                    }
+                }
+            }else{
+                $ret['exec'] = false;
+                // $ret['idCad'] = $id;
+                $ret['dados'] = $dados;
+                $ret['color'] = 'danger';
+                $ret['mens'] = 'A variavel de dados não é array válido!';
+            }
+        } catch (\Throwable $th) {
+            $ret['exec'] = false;
+            // $ret['idCad'] = $id;
+            $ret['error'] = $th->getMessage();
+            $ret['mens'] = 'Erro ao cadastrar registro!';
+            $ret['color'] = 'danger';
+            //throw $th;
+        }
+        return $ret;
+    }
+    /**
+     * Metodo para atualzar ou adicionar qualquer campo json se uma tabela
+     * @param $tab tabela
+     * @param $campo_bus campo de busca da tabela
+     * @param $valor_bus valor de busca na tabela
+     * @param $f_tab campo da tabela
+     * @param $f_json campo da string json
+     * @param $value campo do valor
+     */
+    static function update_json_fields($tab,$campo_bus,$valor_bus,$f_tab,$f_json,$value=false){
+        $campo_json = self::buscaValorDb0($tab,$campo_bus,$valor_bus,$f_tab);
+        $ret = false;
+        // dump($campo_json, $tab,$campos_bus,$valor_bus,$f_tab,$f_json,$value);
+        if($campo_json){
+            if(Qlib::isJson($campo_json)){
+                $arr = Qlib::lib_json_array($campo_json);
+                //atualizar o valor no array
+                $arr[$f_json] = $value;
+                $dsalv = [
+                    $f_tab=>Qlib::lib_array_json($arr),
+                ];
+                $where = "WHERE $campo_bus='$valor_bus'";
+                $ret = self::update_tab($tab,$dsalv,$where,true);
+
+            }
+        }else{
+            $arr[$f_json] = $value;
+            $dsalv = [
+                $f_tab=>Qlib::lib_array_json($arr),
+            ];
+            $where = "WHERE $campo_bus='$valor_bus'";
+            $ret = self::update_tab($tab,$dsalv,$where,true);
+        }
+        return $ret;
+    }
+    /**
+     * Retorna a permissão do usuario logado
+     */
+    static function get_permission($user_logado=null){
+        $ret = null;
+        if(!$user_logado){
+            $user_logado = Auth::user();
+        }
+        if(isset($user_logado['id_permission'])){
+            $ret = $user_logado['id_permission'];
+        }
+        return $ret;
+    }
+    /**
+     * Verifica se o usuario logado é um parceiro ou não
+     */
+    static function is_partner(){
+        $id_permission = self::get_permission();
+        $partner_permission_id = Qlib::qoption('partner_permission_id');
+        if($id_permission==$partner_permission_id){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    /**
+     * Verifica se um parceiro está ativo
+     */
+    static function is_partner_active(){
+        $partner_permission_id = Qlib::qoption('partner_permission_id');
+        $active = self::buscaValorDb0('permissions','id',$partner_permission_id,'name'," AND active='s'");
+        if($active){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    /**
+     * Atualiza um campo json em uma determinada tabela
+     * @param string $tab = Nome da tabela
+     * @param string $campo_bus = Campos de referencia para ser buscado do Ex: Id
+     * @param string $valor_bus = Valor de referencia para ser buscado do Ex: Id = 41
+     * @param string $campo_enc = Campo como valores json, para ser encontrado os dados do Ex: config
+     * @param array $data = dados a serem editados ou adicionados ao valor do campo config
+     * @param bool $insert_new = condição para inserir valor ao array salvo ou não true para sim e false para não
+     */
+    static function json_update_tab($tab,$campo_bus,$valor_bus,$campo_enc,$data=[],$insert_new=true){
+        $json = self::buscaValorDb0($tab,$campo_bus,$valor_bus,$campo_enc);
+        $ret['exec'] = false;
+        if(is_string($json)){
+            $arr_json = json_decode($json,true);
+            if(is_array($arr_json)){
+                foreach ($data as $k1 => $v1) {
+                    if(is_array($v1)){
+                        foreach ($v1 as $k2 => $v2) {
+                            # code...
+                        }
+                    }else{
+                        if(isset($arr_json[$k1])){
+                            $arr_json[$k1] = $v1;
+                        }else{
+                            if($insert_new){
+                                //adiciona novos valores
+                                $arr_json[$k1] = $v1;
+                            }
+                        }
+                    }
+                }
+                $ret['data'] = $arr_json;
+                $up = self::update_tab($tab,[$campo_enc=>Qlib::lib_array_json($arr_json)],"WHERE $campo_bus=$valor_bus");
+                if(self::isAdmin(1))
+                $ret['update'] = $up;
+                if($up['exec']){
+                    $ret['exec'] = $up['exec'];
+                    $ret['mens'] = isset($up['mens']) ? $up['mens'] : false;
+                }
+            }
+        }
+        return $ret;
+    }
+    /**
+     * Gera Array modificado baseando em campo json em uma determinada tabela
+     * @param string $tab = Nome da tabela
+     * @param string $campo_bus = Campos de referencia para ser buscado do Ex: Id
+     * @param string $valor_bus = Valor de referencia para ser buscado do Ex: Id = 41
+     * @param string $campo_enc = Campo como valores json, para ser encontrado os dados do Ex: config
+     * @param array $data = dados a serem editados ou adicionados ao valor do campo config
+     * @param bool $insert_new = condição para inserir valor ao array salvo ou não true para sim e false para não
+     */
+    static function json_generate_tab($tab,$campo_bus,$valor_bus,$campo_enc,$data=[],$insert_new=true){
+        $json = self::buscaValorDb0($tab,$campo_bus,$valor_bus,$campo_enc);
+        $ret['exec'] = false;
+        if(is_string($json)){
+            $arr_json = json_decode($json,true);
+            if(is_array($arr_json)){
+                foreach ($data as $k1 => $v1) {
+                    if(is_array($v1)){
+                        foreach ($v1 as $k2 => $v2) {
+                            # code...
+                        }
+                    }else{
+                        if(isset($arr_json[$k1])){
+                            $arr_json[$k1] = $v1;
+                        }else{
+                            if($insert_new){
+                                //adiciona novos valores
+                                $arr_json[$k1] = $v1;
+                            }
+                        }
+                    }
+                }
+                // $ret['data'] = $arr_json;
+                $ret = $arr_json;
+                // $up = self::update_tab($tab,[$campo_enc=>Qlib::lib_array_json($arr_json)],"WHERE $campo_bus=$valor_bus");
+                // if(self::isAdmin(1))
+                //     $ret['update'] = $up;
+                // if($up['exec']){
+                //     $ret['exec'] = $up['exec'];
+                //     $ret['mens'] = isset($up['mens']) ? $up['mens'] : false;
+                // }
+            }
+        }
+        return $ret;
+    }
 }

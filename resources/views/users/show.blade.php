@@ -9,38 +9,37 @@
 <div class="row">
     <div class="col-md-12 mens">
     </div>
-    <div class="{{$config['class_card1']}}">
-        <div class="card card-primary card-outline d-flex">
+    <div class="col-md-12">
+        <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title">{{__('Informações')}}</h3>
-                <div class="card-tools">
+                <div class="card-tools d-print-none">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                       <i class="fas fa-minus"></i>
                     </button>
                 </div>
             </div>
-            <div class="card-body card-h">
+            <div class="card-body">
                 {{App\Qlib\Qlib::show([
                     'campos'=>$campos,
                     'config'=>$config,
                     'value'=>$value,
                 ])}}
             </div>
-            <div class="card-footer">&nbsp;</div>
+            @include('qlib.show_files')
         </div>
-        {{-- @include('qlib.show_files') --}}
     </div>
-    @if(isset($eventos) && is_object($eventos))
-    <div class="{{$config['class_card2']}} mt-0 mb-5">
-        @include('qlib.eventos.lista_eventos',['eventos'=>$eventos])
-    </div>
-    @endif
 </div>
 
 @stop
 
 @section('css')
     @include('qlib.csslib')
+    <style>
+        .div-salvar{
+            padding: 0px
+        }
+    </style>
 @stop
 
 @section('js')

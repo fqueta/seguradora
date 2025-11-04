@@ -16,7 +16,7 @@ class StoreUserRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,12 +24,12 @@ class StoreUserRequest extends FormRequest
      *
      * @return array
      */
-
     public function rules()
     {
         $this->sanitize();
+
         return [
-            'nome'=>['required',new FullName],
+            'name'=>['required',new FullName],
             'email'=>['required','string','unique:users'],
             'cpf'=>['required',new RightCpf],
             'password'=>['required', 'confirmed', Password::min(6)],
@@ -40,7 +40,7 @@ class StoreUserRequest extends FormRequest
     public function messages()
     {
         return [
-            'nome.required' => __('O Nome é obrigatório'),
+            'name.required' => __('O Nome é obrigatório'),
             'cpf.unique' => __('Este CPF já está sendo utilizado'),
             'email.required' => __('O Email é obrigatório'),
             'email.unique' => __('O Email já está cadastrado'),

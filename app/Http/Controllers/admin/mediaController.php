@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\_upload;
 use App\Models\Post;
 use App\Qlib\Qlib;
 use Illuminate\Http\Request;
@@ -74,7 +75,7 @@ class mediaController extends Controller
                     $ret['exec'] = Post::where('ID',$id)->update($ds);
                 }
                 if($link_img){
-                    $ret['link_img'] = Qlib::qoption('storage_path'). '/'.$link_img;
+                    $ret['link_img'] = \tenant_asset($link_img);
                 }
 
             }
@@ -115,7 +116,10 @@ class mediaController extends Controller
         }else{
             $fileNameToStore= $filename.'.'.$extension;
         }
-        $arquivos = isset($request->arquivos) ? $request->arquivos : 'jpg,jpeg,png,zip,pdf,PDF';
+        $fileNameToStore = strip_tags($fileNameToStore);
+        $fileNameToStore = str_replace('{', '', $fileNameToStore);
+        $fileNameToStore = str_replace('}', '', $fileNameToStore);
+        $arquivos = isset($request->arquivos) ? $request->arquivos : 'jpg,jpeg,png,zip,pdf,PDF,JPG';
         if($arquivos){
             $arr_extension = explode(',',$arquivos);
         }

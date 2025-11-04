@@ -12,7 +12,6 @@ class Etapa extends Model
     protected $fillable = [
         'token',
         'nome',
-        'ordem',
         'ativo',
         'autor',
         'obs',

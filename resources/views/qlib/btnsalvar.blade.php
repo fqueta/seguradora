@@ -1,14 +1,8 @@
 
 @php
     $redirect_base = false;
-    $btn_continuar = request()->get('bc') ? request()->get('bc') : 'true';
-    $label_btn_permanecer = isset($_GET['lbp']) ? $_GET['lbp']:__('Salvar e permanecer');
-    $label_btn_sair = isset($_GET['lbs']) ? $_GET['lbs']:__('Salvar e prosseguir');
+    $btn_continuar = isset($_GET['bc']) ? $_GET['bc'] : 'true';
     $btn_sair = isset($_GET['bs']) ? $_GET['bs'] : 'true';
-    $routeName = request()->route()->getName();
-    if($routeName=='orcamentos.create'){
-        $btn_continuar = 'false';
-    }
     if(isset($config['ac']) && $config['ac']=='cad'){
         $redirect_base = isset($config['redirect'])?$config['redirect']:$redirect_base;
         if(isset($_GET['rbase']) && !empty($_GET['rbase'])){
@@ -22,6 +16,12 @@
             $redirect_base .= '&idCad='.$value['id'];
             //echo $redirect_base;
         }
+    }
+    $label_btn_sair = isset($_GET['lbs']) ? $_GET['lbs']:__('Salvar e sair');
+    if(@$config['ac']=='cad'){
+        $label_btn_permanecer = isset($_GET['lbp']) ? $_GET['lbp']:__('Salvar e continuar');
+    }else{
+        $label_btn_permanecer = isset($_GET['lbp']) ? $_GET['lbp']:__('Salvar e permanecer');
     }
     $frontend = App\Qlib\Qlib::is_frontend();
     if($frontend){
@@ -56,10 +56,19 @@
                     }
                     echo $btnAlt;
                 }
+                if($config['route']=='admin.sic'){
+                    $config['route'] = @$config['url'];
+                }
             @endphp
             @can('create',$config['route'])
-                <a href="{{$r_novo_cadastro}}" class="btn btn-default"> <i class="fas fa-plus"></i> Novo cadastro</a>
+                <a href="{{$r_novo_cadastro}}" title="{{ __('Incluir novo cadastro') }}" class="btn btn-default"> <i class="fas fa-plus"></i> {{ __('Novo cadastro') }}</a>
+                @if ($config['route']=='clientes')
+                    <button type="button" onclick="excluir_cliente('{{ $value['id'] }}','{{ route('clientes.index') }}')"  title="{{ __('Eliminar este cadastro') }}" class="btn btn-outline-danger"> <i class="fas fa-times"></i> {{ __('Excluir') }}</button>
+                @endif
             @endcan
+            @if ($config['route']=='perfil')
+                <button type="submit" btn="permanecer" class="btn btn-primary">{{$label_btn_permanecer}}</button>
+            @endif
             @can('update',$config['route'])
                 @if($btn_continuar=='true')
                     <button type="submit" btn="permanecer" class="btn btn-primary">{{$label_btn_permanecer}}</button>

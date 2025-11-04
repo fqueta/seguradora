@@ -1,7 +1,11 @@
 /node_modules
 /public/hot
 /public/storage
+/public/assets/img
 /storage/*.key
+/storage/tenantpf1
+/storage/tenantpf2
+/storage/tenantpf3
 /vendor
 .env
 .env.backup
@@ -14,9 +18,4 @@ yarn-error.log
 /.idea
 /.vscode
 /sql
-/arquivos
 servidor.txt
-Detalhes do projeto
-det_projeto
-install_supervisor.txt
-/app/Http/Controllers/EmailController.php

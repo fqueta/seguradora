@@ -1,10 +1,8 @@
 @extends('adminlte::page')
 
-@section('title')
-{{$titulo}} - {{config('app.name')}} {{config('app.version')}}
-@stop
+@include('admin.title')
 @section('content_header')
-    <h3>{{$titulo}}</h3>
+<h3>{!!$titulo!!}</h3>
 @stop
 @section('content')
 <div class="row">
@@ -22,6 +20,7 @@
                 </div>
             </div>
             <div class="card-body">
+
                 {{App\Qlib\Qlib::formulario([
                     'campos'=>$campos,
                     'config'=>$config,
@@ -62,16 +61,16 @@
 @section('js')
     @include('qlib.jslib')
     <script type="text/javascript">
-          $(function(){
+        $(function(){
             $('a.print-card').on('click',function(e){
                 openPageLink(e,$(this).attr('href'),"{{date('Y')}}");
             });
-            $('#inp-password').val('');
             $('[mask-cpf]').inputmask('999.999.999-99');
             $('[mask-cnpj]').inputmask('99.999.999/9999-99');
             $('[mask-data]').inputmask('99/99/9999');
             $('[mask-cep]').inputmask('99.999-999');
-          });
+        });
+
     </script>
     @include('qlib.js_submit')
 @stop

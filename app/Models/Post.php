@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 class Post extends Model
 {
     use HasFactory,Notifiable;
+    protected $table = 'posts';
     const CREATED_AT = 'post_date';
     const UPDATED_AT = 'post_modified';
     protected $casts = [
@@ -40,4 +41,9 @@ class Post extends Model
         'config',
         'token',
     ];
+    public function doc_files()
+    {
+        $d = $this->hasMany(_upload::class,'token_produto','token')->select(['id', 'nome as name','pasta as url' , 'ordem as ordenar', 'config'])->orderBy('ordem', 'ASC');
+        return $d;
+    }
 }

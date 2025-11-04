@@ -10,7 +10,8 @@
             @php
                 if(isset($file->config)){
                     $file->config = App\Qlib\Qlib::lib_json_array($file->config);
-                    $dominio_arquivo=url(App\Qlib\Qlib::qoption('storage_path')).'/';
+                    // $dominio_arquivo=App\Qlib\Qlib::qoption('dominio_arquivos').'/';
+                    $dominio_arquivo=tenant_asset('/');
                     if(isset($file->config['extenssao']) && !empty($file->config['extenssao']))
                     {
                         if($file->config['extenssao'] == 'jpg' || $file->config['extenssao']=='png' || $file->config['extenssao'] == 'jpeg'){
@@ -27,7 +28,7 @@
                     }
                 }
             @endphp
-            <div class="col-md-2 col-6 grade-img mb-2 text-center">
+            <div class="col-md-2 grade-img mb-2 text-center col-4">
                 @if ($tipo=='image')
                     <a href="{{$dominio_arquivo.$file->pasta}}" data-maxwidth="80%" title="{{$file->nome}}" data-gall="gall1" class="venobox">
                         <img src="{{$dominio_arquivo.$file->pasta}}" class="shadow w-100" alt="{{$file->nome}}" srcset="">

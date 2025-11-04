@@ -4,16 +4,11 @@
             @if ($config['label'])
                 <label for="{{$config['campo']}}">{{$config['label']}}:</label>
             @endif
-            @if(isset($config['value']) && !empty($config['value']))
-                {{$config['value']}}
-            @else
-                @if (isset($config['arr_opc']))
-                    {{@$config['arr_opc'][$config['value']]}}
-                @endif
+            @if (isset($config['arr_opc']))
+                {{@$config['arr_opc'][$config['value']]}}
             @endif
-
         </div>
-    @elseif ($config['type']=='hidden' || $config['type']=='password')
+    @elseif ($config['type']=='hidden')
     @elseif ($config['type']=='select_multiple')
         @if (isset($config['arr_opc']))
         <div class="col-{{$config['col']}}-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
@@ -33,7 +28,7 @@
             @if ($config['label'])
                 <label for="{{$config['campo']}}">{{$config['label']}}</label>
             @endif
-            {{@$config['arr_opc'][$config['value']]}}
+            {!!@$config['arr_opc'][$config['value']]!!}
         </div>
         @endif
     @elseif ($config['type']=='radio')
@@ -45,34 +40,33 @@
         @endif
     @elseif ($config['type']=='chave_checkbox')
         <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
-            <label class="" for="{{$config['campo']}}">
-                @if(isset($config['checked']) && $config['checked'] == $config['value'])
-                    <i class="fas fa-check-square"></i>
-                @endif
-                {{$config['label']}}
-            </label>
-
-        </div>
-    @elseif ($config['type']=='textarea')
-        <!--config['checked'] é o gravado no bando do dedos e o value é o valor para ficar checado-->
-        <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}</label><br>
-            @if(isset($config['value'])){!! $config['value'] !!}@endif
-        </div>
-    @elseif ($config['type']=='html')
-        @php
-           $config['script'] = isset($config['script'])?$config['script']:false;
-           @endphp
-        <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
-            @if ($config['script'])
-                @if(isset($config['dados']))
-                    @include($config['script'],['dados'=>@$config['dados']])
-                @else
-                    @include($config['script'])
-                @endif
+            @if(isset($config['arr_opc'][$config['checked']]))
+                <label for="{{$config['campo']}}">{{$config['label']}}:&nbsp;</label>
+                    {{$config['arr_opc'][$config['checked']]}}
+            @else
+                <label class="" for="{{$config['campo']}}">
+                    @if(isset($config['checked']) && $config['checked'] == $config['value'])
+                        <i class="fas fa-check-square"></i>
+                    @endif
+                    {{$config['label']}}
+                </label>
             @endif
         </div>
-    @elseif ($config['type']=='html_script')
+    @elseif ($config['type']=='radio_btn')
+        <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
+            <label for="{{$config['campo']}}">{{$config['label']}}</label>:
+            @if(isset($config['arr_opc'][$config['value']]))
+                {!!$config['arr_opc'][$config['value']]!!}
+            @else
+                @if(isset($config['value'])){!!$config['value']!!}@endif
+            @endif
+        </div>
+    @elseif ($config['type']=='textarea')
+        <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
+            <label for="{{$config['campo']}}">{{$config['label']}}</label><br>
+            @if(isset($config['value'])){!!$config['value']!!}@endif
+        </div>
+    @elseif ($config['type']=='html')
         @php
            $config['script'] = isset($config['script'])?$config['script']:false;
         @endphp
@@ -81,8 +75,24 @@
                 {!!$config['script']!!}
             @endif
         </div>
-
+    @elseif ($config['type']=='html_blade')
+        @php
+        dd($config);
+           $config['script'] = isset($config['script'])?$config['script']:false;
+        @endphp
+        <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
+            @if ($config['script'])
+                @if(isset($config['dados']))
+                    @include($config['script'],@$config['dados'])
+                @else
+                    @include($config['script'])
+                @endif
+            @endif
+        </div>
     @elseif ($config['type']=='html_vinculo')
+        @php
+           $config['script'] = isset($config['script'])?$config['script']:false;
+        @endphp
         <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
             <div class="card card-secondary card-outline">
                 <div class="card-header">
@@ -101,6 +111,7 @@
                         @endif
                         @php
                             $d = $config['data_selector'];
+
                         @endphp
                         @if (isset($config['data_selector']['table']) && is_array($config['data_selector']['table']))
                         <div class="col-md-12 ">
@@ -108,11 +119,9 @@
                                     @if (@$config['data_selector']['tipo']=='array')
                                         @foreach ($config['data_selector']['list'] as $klis=>$vlis)
                                             <div class="row" id="tr-{{$klis}}-{{@$config['data_selector']['list'][$klis]['id']}}">
-
-
                                                 @foreach ($config['data_selector']['campos'] as $kb=>$vb)
                                                     @if ($vb['type']=='arr_tab')
-                                                        {!! App\Qlib\Qlib::qShow([
+                                                        {{App\Qlib\Qlib::qShow([
                                                             'type'=>@$vb['type'],
                                                             'campo'=>$kb,
                                                             'label'=>$vb['label'],
@@ -133,7 +142,7 @@
                                                             'script'=>@$vb['script_show'],
                                                             'valor_padrao'=>@$vb['valor_padrao'],
                                                             'dados'=>@$vb['dados'],
-                                                        ]) !!}
+                                                        ])}}
                                                     @else
                                                         @php
                                                             if(isset($vb['cp_busca']) && !empty($vb['cp_busca']))
@@ -145,26 +154,13 @@
                                                                     $value = $config['data_selector']['list'][$klis][$kb];
                                                                 }
                                                             }else{
-                                                                $vlue = @$config['data_selector']['list'][$klis][$kb];
+                                                                $value = @$config['data_selector']['list'][$klis][$kb];
                                                                 if(isset($vb['arr_opc'])){
-                                                                    $value = isset($vb['arr_opc'][$vlue])?$vb['arr_opc'][$vlue]:$vlue;
-                                                                    $value = $vlue;
-                                                                }else{
-                                                                    $value = $vlue;
+                                                                    $value = isset($vb['arr_opc'][$value])?$vb['arr_opc'][$value]:$value;
                                                                 }
                                                             }
-                                                            if ($vb['label']=='Quadra'){
-                                                                $value = $vlue;
-                                                            }
-                                                        //  if($kb=='bairro'){
-                                                        //     echo $vb['type'];
-                                                        //     echo $value;
-                                                        //     dd($config['data_selector']);
-                                                        //  }
-                                                     @endphp
-
-
-                                                    {!! App\Qlib\Qlib::qShow([
+                                                        @endphp
+                                                    {{App\Qlib\Qlib::qShow([
                                                         'type'=>@$vb['type'],
                                                         'campo'=>$kb,
                                                         'label'=>$vb['label'],
@@ -185,7 +181,7 @@
                                                         'script'=>@$vb['script_show'],
                                                         'valor_padrao'=>@$vb['valor_padrao'],
                                                         'dados'=>@$vb['dados'],
-                                                        ]) !!}
+                                                        ])}}
                                                     @endif
                                                 @endforeach
                                                 <div class="col-12">
@@ -197,7 +193,7 @@
                                         <div class="row" id="tr-{{@$config['data_selector']['list']['id']}}">
                                             @foreach ($config['data_selector']['campos'] as $kb=>$vb)
 
-                                                @if ($vb['type']=='text' || $vb['type']=='date' || $vb['type']=='tel' || $vb['type']=='number' || $vb['type']=='moeda')
+                                                @if ($vb['type']=='text')
                                                     @php
                                                         if(isset($vb['cp_busca']) && !empty($vb['cp_busca']))
                                                         {
@@ -210,11 +206,8 @@
                                                         }else{
                                                             $value = @$config['data_selector']['list'][$kb];
                                                         }
-                                                        if($vb['type']=='date'){
-                                                            $value = App\Qlib\Qlib::dataExibe($value);
-                                                        }
                                                     @endphp
-                                                    {!! App\Qlib\Qlib::qShow([
+                                                    {{App\Qlib\Qlib::qShow([
                                                         'type'=>@$vb['type'],
                                                         'campo'=>$kb,
                                                         'label'=>$vb['label'],
@@ -235,7 +228,7 @@
                                                         'script'=>@$vb['script_show'],
                                                         'valor_padrao'=>@$vb['valor_padrao'],
                                                         'dados'=>@$vb['dados'],
-                                                    ]) !!}
+                                                    ])}}
 
                                                 @elseif ($vb['type']=='arr_tab'||$vb['type']=='select')
                                                     @php
@@ -254,7 +247,7 @@
                                                         }
                                                     @endphp
 
-                                                    {!! App\Qlib\Qlib::qShow([
+                                                    {{App\Qlib\Qlib::qShow([
                                                         'type'=>@$vb['type'],
                                                         'campo'=>$kb,
                                                         'label'=>$vb['label'],
@@ -275,7 +268,7 @@
                                                         'script'=>@$vb['script_show'],
                                                         'valor_padrao'=>@$vb['valor_padrao'],
                                                         'dados'=>@$vb['dados'],
-                                                        ]) !!}
+                                                        ])}}
                                                 @endif
                                             @endforeach
                                         </div>
@@ -299,35 +292,42 @@
             </div>
         </div>
     @elseif($config['type']=='text')
-        <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}:</label>
-            {!! @$config['value'] !!}
-        </div>
-    @elseif($config['type']=='moeda')
-        <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}:</label>
-            @php
-                $value=null;
-                if(!empty($config['value'])){
-                        $sigla   = 'R$';
-                        $value = $config['value'];
-                        $pos = strpos( $value, $sigla );
-                        if ($pos === false) {
-                            $value = 'R$'.number_format((double)$config['value'],2,',','.');
-                        }
-                }
-                echo $value;
-            @endphp
-        </div>
-    @elseif($config['type']=='date')
-        <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}:</label>
-            {{ App\Qlib\Qlib::dataExibe(@$config['value']) }}
-        </div>
+    <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
+        <label for="{{$config['campo']}}">{{$config['label']}}:</label>
+        {!!@$config['value']!!}
+    </div>
+    @elseif($config['type']=='show_file')
+        @include('qlib.show_files')
+    @elseif($config['type']=='show_file_front')
+    <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
+
+        @php
+            $value = isset($config['value'])?$config['value']:false;
+        @endphp
+        @include('portal.sic_front.show_files')
+    </div>
+    @elseif($config['type']=='file')
+    <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
+        <label for="{{$config['campo']}}">{{$config['label']}}:</label><br>
+        @if(is_array(@$config['value']))
+        @else
+            @if(!empty($config['value']))
+                @php
+                    $href = tenant_asset($config['value']);
+                    $arquivo = explode('.',$config['value']);
+                    $mime = false;
+                    if(isset($arquivo[1])){
+                        $mime = ' '.strtoupper($arquivo[1]);
+                    }
+                @endphp
+                <a href="{{$href}}" class="" style="text-decoration: underline" target="_blank">{{__('ARQUIVO').$mime}}</a>
+            @endif
+        @endif
+    </div>
     @else
-        <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}:</label>
-            {!! @$config['value'] !!}
-        </div>
+    <div class="col-{{$config['tam']}}" div-id="{{$config['campo']}}">
+        <label for="{{$config['campo']}}">{{$config['label']}}:</label>
+        {!!@$config['value']!!}
+    </div>
     @endif
 @endif

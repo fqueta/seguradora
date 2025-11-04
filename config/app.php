@@ -1,5 +1,6 @@
 <?php
 
+
 return [
 
     /*
@@ -12,13 +13,13 @@ return [
     | any other location as required by the application or its packages.
     |
     */
-    'dominio' => 'https://oficina.aeroclubejf.com.br/',
-    'version' => '1.2.2',
-    'name' => env('APP_NAME', 'Oficina ACJF'),
-    'id_app' => env('ID_APP', 'oficina'),
-    'last_update' => '19/12/2024',
-    'zapsing_url_api' => env('ZAPSING_URL_API', ''),
-    'zapsing_id' => env('ZAPSING_ID', ''),
+
+    'name' => env('APP_NAME', 'SEGSYS'),
+    'dominio' => 'https://maisaqui.com.br/',
+    'version' => '1.0.0.5',
+    'id_app' => env('ID_APP', 'segsys'),
+    'last_update' => '27/03/2025',
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
@@ -56,7 +57,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://oficina.aeroclubejf.com.br'),
+    'url' => env('APP_URL', 'http://localhost'),
 
     'asset_url' => env('ASSET_URL', null),
 
@@ -126,6 +127,8 @@ return [
     'key' => env('APP_KEY'),
 
     'cipher' => 'AES-256-CBC',
+    'prefixo_admin' => 'admin',
+    'prefixo_site' => '/',
 
     /*
     |--------------------------------------------------------------------------
@@ -168,6 +171,7 @@ return [
         // Yajra\DataTables\DataTablesServiceProvider::class,
         // Spatie\Permission\PermissionServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
+
         /*
          * Package Service Providers...
          */
@@ -181,6 +185,8 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\QlibServiceProvider::class,
+        App\Providers\TenancyServiceProvider::class
+
     ],
 
     /*

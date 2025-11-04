@@ -22,62 +22,35 @@ class MenuSeeder extends Seeder
                 'icon'=>'fa fa-tachometer-alt',
                 'actived'=>true,
                 'url'=>'painel',
-                'route'=>'home',
+                'route'=>'home.admin',
                 'pai'=>''
             ],
             [
                 'categoria'=>'CADASTROS',
-                'description'=>'Ordem de serviços',
-                'icon'=>'fas fa-box',
+                'description'=>'Clientes',
+                'icon'=>'fas fa-users',
                 'actived'=>true,
-                'url'=>'cad-produtos',
+                'url'=>'cad-clientes',
                 'route'=>'',
                 'pai'=>''
             ],
             [
                 'categoria'=>'',
-                'description'=>'Nova ordem',
-                'icon'=>'fas fa-plus',
+                'description'=>'Todos Clientes',
+                'icon'=>'fas fa-user',
                 'actived'=>true,
-                'url'=>'os',
-                'route'=>'produtos.create',
-                'pai'=>'cad-produtos'
+                'url'=>'clientes',
+                'route'=>'clientes.index',
+                'pai'=>'cad-clientes'
             ],
             [
                 'categoria'=>'',
-                'description'=>'Todas OS',
-                'icon'=>'fas fa-list',
+                'description'=>'Importar Clientes',
+                'icon'=>'fas fa-file',
                 'actived'=>true,
-                'url'=>'produtos',
-                'route'=>'produtos.index',
-                'pai'=>'cad-produtos'
-            ],
-            [
-                'categoria'=>'',
-                'description'=>'Orçamentos',
-                'icon'=>'fas fa-file-excel',
-                'actived'=>true,
-                'url'=>'cad-orcamentos',
-                'route'=>'',
-                'pai'=>''
-            ],
-            [
-                'categoria'=>'',
-                'description'=>'Novo orçamento',
-                'icon'=>'fas fa-plus',
-                'actived'=>true,
-                'url'=>'orcamento',
-                'route'=>'orcamentos.create',
-                'pai'=>'cad-orcamentos'
-            ],
-            [
-                'categoria'=>'',
-                'description'=>'Todos Orçamentos',
-                'icon'=>'fas fa-list',
-                'actived'=>true,
-                'url'=>'orcamentos',
-                'route'=>'orcamentos.index',
-                'pai'=>'cad-orcamentos'
+                'url'=>'import_clientes',
+                'route'=>'clientes.import',
+                'pai'=>'cad-clientes'
             ],
             [
                 'categoria'=>'SITE',
@@ -130,7 +103,7 @@ class MenuSeeder extends Seeder
                 'icon'=>'fas fa-cogs',
                 'actived'=>true,
                 'url'=>'config',
-                'route'=>'sistema.config',
+                'route'=>'',
                 'pai'=>''
             ],
             [

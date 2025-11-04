@@ -100,7 +100,7 @@
     {{-- Register link --}}
     @if($register_url)
         <p class="my-0">
-            <a href="{{ url('/user/create') }}">
+            <a href="{{ url('/internautas/cadastrar/pf') }}">
                 {{ __('adminlte::adminlte.register_a_new_membership') }}
             </a>
         </p>

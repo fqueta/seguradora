@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class _upload extends Model
 {
     use HasFactory;
+    protected $casts = [
+        'config' => 'array',
+    ];
     protected $fillable = [
         'token_produto',
         'pasta',

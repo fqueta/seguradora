@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\admin\EventController;
 use stdClass;
 use App\Models\Escolaridade;
 use Illuminate\Http\Request;
@@ -172,8 +171,6 @@ class EscolaridadeController extends Controller
             'exec'=>true,
             'dados'=>$dados
         ];
-        //REGISTRAR EVENTOS
-        (new EventController)->listarEvent(['tab'=>$this->tab,'id'=>$salvar->id,'this'=>$this]);
 
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$salvar->id;
@@ -284,10 +281,6 @@ class EscolaridadeController extends Controller
                 'mens'=>'Erro ao receber dados',
                 'color'=>'danger',
             ];
-        }
-        if($atualizar){
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
         }
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$id;

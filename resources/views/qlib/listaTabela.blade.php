@@ -64,7 +64,7 @@
                     $val->id = $val->ID;
                 }
                 $rlink = 'edit';
-                if($routa=='orcamentos'||$routa=='users'||$routa=='beneficiarios'||$routa=='lotes'||$routa=='quadras'||$routa=='bairros'){
+                if($routa=='leiloes_adm'||$routa=='users'||$routa=='beneficiarios'||$routa=='lotes'||$routa=='quadras'||$routa=='bairros'){
                     $rlink = 'show';
                 }
                 if($routa=='leiloes'){
@@ -86,16 +86,14 @@
                         <input type="checkbox" class="checkbox" onclick="color_select1_0(this.checked,this.value);" value="{{$val->id}}" name="check_{{$val->id}}" id="check_{{$val->id}}">
                     </td>
                     <td class="text-right d-flex d-print-none">
+
                         @if ($frontend && isset($link_edit))
                             <a href=" {{ $link_edit }} " title="Editar" class="btn btn-sm btn-outline-secondary mr-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                                <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-                                </svg>
+                                <i class="fa fa-pen"></i>
                             </a>
                         @else
                             @can('update',$routa)
-                                @if ($routa=='orcamentos' || $routa=='users'||$routa=='beneficiarios'||$routa=='lotes'||$routa=='quadras'||$routa=='bairros')
+                                @if ($routa=='leiloes_adm' || $routa=='users'||$routa=='beneficiarios'||$routa=='lotes'||$routa=='quadras'||$routa=='bairros')
                                     <a href="{{ $linkShow }}" title="visualizar" class="btn btn-sm btn-outline-secondary mr-2">
                                         <i class="fas fa-eye"></i>
                                     </a>
@@ -103,14 +101,11 @@
                                 @php
 
                                 @endphp
-                                <a href=" {{ $link_edit }} " title="Editar" class="btn btn-sm btn-outline-secondary mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-                                    </svg>
+                                <a href=" {{ $link_edit }} " title="Editar" class="btn btn-sm btn-outline-secondary mr-1">
+                                    <i class="fa fa-pen"></i>
                                 </a>
                                 @else
-                                @if ($routa=='leiloes' || $routa=='orcamentos')
+                                @if ($routa=='leiloes' || $routa=='leiloes_adm')
                                     <a href=" {{ route($routa.'.show',['id'=>$val->id]) }} " title="visualizar" class="btn btn-sm btn-outline-secondary mr-2">
                                         <i class="fas fa-eye"></i>
                                     </a>
@@ -126,13 +121,21 @@
                             <form id="frm-{{ $val->id }}" action="{{ route($routa.'.destroy',['id'=>$val->id]) }}" method="POST">
                                 @csrf
                                 @method('DELETE')
-                                <button type="button" data-del="true" data-id="{{$val->id}}" name="button" title="Excluir" class="btn btn-sm btn-outline-danger">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                                    </svg>
+                                <button type="button" data-del="true" data-id="{{$val->id}}" name="button" title="Excluir" class="btn btn-outline-danger">
+                                    <i class="fa fa-times"></i>
                                 </button>
                             </form>
+                            @if($routa=='clientes')
+                                    @if (isset($val->config['status_contrato']) && ($val->config['status_contrato']=='Cancelado' || $val->config['status_contrato']=='cancelado' || $val->config['status_contrato']=='Reativando'))
+                                    <button title="{{__('Reativar cadastro')}}" onclick="reativar_cadastro('{{$val->token}}','{{ $link_edit }}')" type="button" class="btn btn-outline-secondary ml-1"><i class="fa fa-recycle"></i></button>
+                                    @endif
+                                    {{-- @if (isset($val->config['status_contrato']) && ($val->config['status_contrato']=='Aprovado' || $val->config['status_contrato']=='aprovado'))
+                                    <button title="{{__('Cancelar cadastro')}}" onclick="calcelar_cadastro('{{$val->token}}')" type="button" class="btn btn-outline-danger mr-1"><i class="fa fa-times"></i></button>
+
+                                    @endif --}}
+
+                                @endif
+
                         @endcan
                     </td>
                 @if (isset($campos_tabela) && is_array($campos_tabela))
@@ -158,9 +161,13 @@
 
                                         $td = @$vd['arr_opc'][$val->$kd];
                                     }
+                                    if(is_array($td) ){
+                                        $td = @$td['option'];
+                                    }
                                 @endphp
-                                <td class="{{str_replace('[]','',$kd)}}" title="{{@$vd['arr_opc'][$val->$kd]}}">{{$td}}</td>
+                                <td class="{{str_replace('[]','',$kd)}}" title="{{$td}}">{{$td}}</td>
                             @elseif (isset($vd['type']) && ($vd['type']=='select_multiple'))
+
                                 @php
                                 // echo $kd;
                                 $nk = str_replace('[]','',$kd);
@@ -182,21 +189,43 @@
                                 @endphp
                                 <td class="{{str_replace('[]','',$kd)}}" title="{{@$td}}">{{@$td}}</td>
                             @elseif (isset($vd['type']) && $vd['type']=='chave_checkbox' && isset($vd['arr_opc'][$val->$kd]))
-                                <td class="{{str_replace('[]','',$kd)}}" title="{{$vd['arr_opc'][$val->$kd]}}">{{$vd['arr_opc'][$val->$kd]}}</td>
+                                <td class="{{str_replace('[]','',$kd)}}" title="{{$vd['arr_opc'][$val->$kd]}}">
+                                    <div class="d-none d-print-table">
+                                        {{$vd['arr_opc'][$val->$kd]}}
+                                    </div>
+                                    @php
+                                        // $vd['checked'] = $vd['arr_opc'][$val->$kd];
+                                        $vd['checked'] = $val->$kd;
+                                    @endphp
+                                    <div class="d-print-none custom-control custom-switch custom-switch-off-danger custom-switch-on-success">
+                                        <input type="checkbox" onchange="update_status_post(this)" data-campo="{{@$vd['campo']}}" data-id="{{$val->id}}" data-tab="{{@$vd['tab']}}" class="custom-control-input" @if(isset($vd['checked']) && $vd['checked'] == $vd['value']) checked @endif  value="{{$vd['value']}}"  name="{{$kd}}" id="{{$kd}}-{{$val->id}}">
+                                        <label class="custom-control-label" for="{{$kd}}-{{$val->id}}">{{$vd['label']}}</label>
+                                    </div>
+                                </td>
                             @elseif(isset($vd['cp_busca']) && !empty($vd['cp_busca']))
                                 @php
                                     $cp = explode('][',$vd['cp_busca']);
-                                    if(is_string($val[$cp[0]])){
-                                        if(json_validate($val[$cp[0]])){
-                                            $val[$cp[0]] = json_decode($val[$cp[0]],true);
-                                        }
+                                    $td = @$val[$cp[0]][$cp[1]];
+                                    if(isset($vd['type']) && $vd['type']=='date'){
+                                        $td = App\Qlib\Qlib::dataExibe(@$val[$cp[0]][$cp[1]]);
                                     }
-                                    @endphp
-                                @if (isset($cp[1]) && isset($val[$cp[0]][$cp[1]]) && is_string($val[$cp[0]][$cp[1]]))
-                                <td class="{{$cp[1]}}" title="{{ @$val[$cp[0]][$cp[1]] }}">
-                                        {{ @$val[$cp[0]][$cp[1]] }}
-                                    </td>
+                                @endphp
+                                @if (isset($cp[1]))
+                                    <td class="{{$cp[1]}}" title="{{ @$val[$cp[0]][$cp[1]] }}">{{ $td }}</td>
                                 @endif
+                            @elseif (isset($vd['type']) && ($vd['type']=='date'))
+                                @php
+
+                                    if(isset($vd['arr_opc']) && isset($vd['arr_opc'][$val->$kd])){
+                                        $td = $vd['arr_opc'][$val->$kd];
+                                    }else{
+                                        $td = $val->$kd;
+                                    }
+                                @endphp
+
+                                <td class="{{str_replace('[]','',$kd)}}" title="{{$td}}">
+                                    {{ App\Qlib\Qlib::dataExibe($td)}}
+                                </td>
                             @else
                                 @php
                                     if(isset($vd['arr_opc']) && isset($vd['arr_opc'][$val->$kd])){

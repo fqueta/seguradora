@@ -15,110 +15,40 @@ class tagSeeder extends Seeder
     public function run()
     {
         $arr = [
-            ['nome'=>'Tipo de páginas','value'=>'tipo_paginas','obs'=>'Configurar tipos de páginas','ordem'=>1],
-            ['nome'=>'Tipo de conteúdos','value'=>'tipo_conteudo','obs'=>'Tipos de conteúdos','ordem'=>2],
+            ['nome'=>'STATUS DOS CONTRATOS','obs'=>'Todas os status',"value"=>"status_contratos",],
             [
-                'nome'=>'PÁGINA PRINCIAL',
-                'pai'=>1,
-                'value'=>'pode_lance',
-                'ordem'=>2,
-                'obs'=>'Página com banner do tipo da home',
-                'config'=>['color'=>'danger','icon'=>'fa fa-times']
-            ],
-            [
-                'nome'=>'PÁGINA SECUNDÁRIA',
-                'pai'=>1,
-                'ordem'=>3,
-                'obs'=>'São imóveis que são cadastrados, mas que não comporão o processo jurídico por já apresentarem registro imobiliário. Devem ser considerados como cadastros completos.',
-                'value'=>'pagina_secu',
-                'config'=>['color'=>'info','icon'=>'fas fa-calendar-check']
-            ],
-            [
-                'nome'=>'Usuários que podem dar lances',
-                'pai'=>0,
-                'value'=>'podem_dar_lances',
-                'ordem'=>3,
-                'obs'=>'Agrupa todas a opções do select de clientes que podem dar lançes',
-                'config'=>['color'=>'warning','icon'=>'fas fa-search-minus']
-            ],
-            [
-                'nome'=>'Qualquer usuário',
-                'pai'=>5,
+                'nome'=>'Aprovado',
+                'pai'=>'status_contratos',
+                'obs'=>'Clientes que foram aprovados pela sulamerica direto da API',
                 'ordem'=>1,
-                'value'=>'qualquer_usuario',
-                'obs'=>'',
-                'config'=>['color'=>'warning','icon'=>'fa fa-times']
+                'value'=>'Aprovado',
             ],
             [
-                'nome'=>'Usuários registrados há pelo menos 48 horas',
-                'pai'=>5,
+                'nome'=>'Cancelado',
+                'pai'=>'status_contratos',
+                'obs'=>'Clientes que foram cancelados através sulamerica direto da API',
                 'ordem'=>2,
-                'value'=>'48_horas',
-                'obs'=>'',
-                'config'=>['color'=>'warning','icon'=>'fa fa-times']
+                'value'=>'Cancelado',
             ],
             [
-                'nome'=>'Usuários registrados há pelo menos 7 dias',
-                'pai'=>5,
+                'nome'=>'Reativando',
+                'pai'=>'status_contratos',
+                'obs'=>'Clientes que foram Reativando através sulamerica direto da API',
                 'ordem'=>3,
-                'value'=>'7_dias',
-                'obs'=>'',
-                'config'=>['color'=>'warning','icon'=>'fa fa-times']
+                'value'=>'Reativando',
             ],
             [
-                'nome'=>'Usuários registrados há pelo menos 1 mês',
-                'pai'=>5,
+                'nome'=>'Plano01',
+                'pai'=>'status_contratos',
+                'obs'=>'Clientes que foram aprovandos antes da criação do sistema',
                 'ordem'=>4,
-                'value'=>'1_mes',
-                'obs'=>'',
-                'config'=>['color'=>'warning','icon'=>'fa fa-times']
+                'value'=>'Plano01',
             ],
-            [
-                'nome'=>'Usuários registrados há pelo menos 3 meses',
-                'pai'=>5,
-                'ordem'=>5,
-                'value'=>'3_meses',
-                'obs'=>'',
-                'config'=>['color'=>'warning','icon'=>'fa fa-times']
-            ],
-            [
-                'nome'=>'FORMAS DE PAGAMENTO',
-                'pai'=>0,
-                'ordem'=>5,
-                'value'=>'formas_pagamento',
-                'obs'=>'',
-                'config'=>[]
-            ],
-            [
-                'nome'=>'Catão de Crédito',
-                'pai'=>11,
-                'ordem'=>1,
-                'value'=>'credit_card',
-                'obs'=>'',
-                'config'=>[]
-            ],
-            [
-                'nome'=>'PIX',
-                'pai'=>11,
-                'ordem'=>2,
-                'value'=>'PIX',
-                'obs'=>'',
-                'config'=>[]
-            ],
-            [
-                'nome'=>'Boleto',
-                'pai'=>11,
-                'ordem'=>3,
-                'value'=>'BOLETO',
-                'obs'=>'',
-                'config'=>[]
-            ],
-
         ];
         Tag::truncate();
         foreach ($arr as $key => $value) {
             $d = $value;
-            $d['token']=uniqid();
+            $d['value']= isset($value['value']) ? $value['value'] :  uniqid();
             Tag::create($d);
         }
     }

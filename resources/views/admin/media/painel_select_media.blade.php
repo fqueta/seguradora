@@ -35,7 +35,6 @@
         <input class="form-control" type="hidden" name="d_meta[meta_key]" value="imagem_destacada">
     </div>
 </form>
-
 @elseif($ac=='modal')
 <!-- Modal -->
 <div class="modal fade" id="painel-select-media" tabindex="-1" role="dialog" aria-labelledby="modelTitleId" aria-hidden="true">
@@ -68,6 +67,8 @@
                       <div class="card-body">
                         <div class="tab-content" id="myTabContent">
                           <div class="tab-pane fade show active" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                            <p>Tipos de arquivos suportados: <b>{{$files_types}}</b></p>
+
                             <form id="file-upload" action="{{route('media.store')}}" method="post" class="dropzone" enctype="multipart/form-data">
                                 @csrf
                                 {{-- <input type="hidden" name="token_produto" value="{{$config['token_produto']}}" />
@@ -187,7 +188,7 @@
         document.querySelector('#library-tab').click();
     }
     function btnUpload(){
-        $('[data-dismiss="modal"]').addClass('d-none');
+        // $('[data-dismiss="modal"]').addClass('d-none');
         $('#btn-lib').removeClass('d-none');
     }
     function getLibTab(){

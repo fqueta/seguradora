@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\admin\EventController;
 use stdClass;
 use App\Models\Estadocivil;
 use Illuminate\Http\Request;
@@ -111,7 +110,7 @@ class EstadocivilController extends Controller
     }
     public function index(User $user)
     {
-        $this->authorize('is_admin_logado', $user);
+        $this->authorize('is_admin', $user);
         $title = 'Cadastro de estadocivil';
         $titulo = $title;
         $queryEstadocivil = $this->queryEstadocivil($_GET);
@@ -133,7 +132,7 @@ class EstadocivilController extends Controller
     }
     public function create(User $user)
     {
-        $this->authorize('is_admin_logado', $user);
+        $this->authorize('is_admin', $user);
         $title = 'Cadastrar estado civil';
         $titulo = $title;
         $config = [
@@ -173,8 +172,6 @@ class EstadocivilController extends Controller
             'exec'=>true,
             'dados'=>$dados
         ];
-        //REGISTRAR EVENTOS
-        (new EventController)->listarEvent(['tab'=>$this->tab,'id'=>$salvar->id,'this'=>$this]);
 
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$salvar->id;
@@ -285,10 +282,6 @@ class EstadocivilController extends Controller
                 'mens'=>'Erro ao receber dados',
                 'color'=>'danger',
             ];
-        }
-        if($atualizar){
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
         }
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$id;

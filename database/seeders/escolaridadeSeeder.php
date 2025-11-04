@@ -27,6 +27,7 @@ class escolaridadeSeeder extends Seeder
             'Mestrado',
             'Doutorado',
         ];
+        Escolaridade::truncate();
         foreach ($arr as $key => $value) {
             Escolaridade::create([
                 'nome'=>$value,

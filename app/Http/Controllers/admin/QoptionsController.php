@@ -19,11 +19,13 @@ class QoptionsController extends Controller
     public $routa;
     public $label;
     public $view;
+    public $tab;
     public function __construct(User $user)
     {
         $this->middleware('auth');
         $this->user = $user;
         $this->routa = 'qoptions';
+        $this->tab = 'qoptions';
         $this->label = 'Qoption';
         $this->view = 'padrao';
     }
@@ -105,20 +107,15 @@ class QoptionsController extends Controller
     }
     public function campos(){
         $user = Auth::user();
-        $ret = [
+        return [
             'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
             'token'=>['label'=>'token','active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
             'nome'=>['label'=>'Nome da opção','active'=>true,'placeholder'=>'Ex.: Nome servidor','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'6'],
             'url'=>['label'=>'Valor da opçao','active'=>true,'placeholder'=>'Ex.: server_nome','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'6'],
             'valor'=>['label'=>'Conteudo da configuração','active'=>false,'type'=>'textarea','placeholder'=>'aceitar json','exibe_busca'=>'d-block','event'=>'','tam'=>'12','class'=>''],
             'obs'=>['label'=>'Observação','active'=>false,'type'=>'textarea','exibe_busca'=>'d-block','event'=>'','tam'=>'12','class'=>''],
-            'ativo'=>['label'=>'Liberar','active'=>true,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
+            'ativo'=>['label'=>'Liberar','tab'=>$this->tab,'active'=>true,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
         ];
-        if($user['id_permission']>1){
-            $ret['url']['event'] = 'disabled';
-            // unset($user['url']);
-        }
-        return $ret;
     }
 
     public function index(User $user)
@@ -139,6 +136,7 @@ class QoptionsController extends Controller
             'arr_titulo'=>$queryQoption['arr_titulo'],
             'config'=>$queryQoption['config'],
             'routa'=>$routa,
+            'url'=>$routa,
             'view'=>$this->view,
             'i'=>0,
         ]);
@@ -152,6 +150,7 @@ class QoptionsController extends Controller
             'ac'=>'cad',
             'frm_id'=>'frm-qoptions',
             'route'=>$this->routa,
+            'url'=>$this->routa,
         ];
         $value = [
             'token'=>uniqid(),
@@ -224,6 +223,7 @@ class QoptionsController extends Controller
                 'ac'=>'alt',
                 'frm_id'=>'frm-qoptions',
                 'route'=>$this->routa,
+                'url'=>$this->routa,
                 'id'=>$id,
             ];
 
@@ -271,7 +271,7 @@ class QoptionsController extends Controller
         }
         $userLogadon = Auth::id();
         $data['ativo'] = isset($data['ativo'])?$data['ativo']:'n';
-        $data['autor'] = $userLogadon;
+        //$data['autor'] = $userLogadon;
         if(isset($dados['config'])){
             $dados['config'] = Qlib::lib_array_json($dados['config']);
         }

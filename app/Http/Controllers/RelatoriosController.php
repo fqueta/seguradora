@@ -329,7 +329,7 @@ class RelatoriosController extends Controller
     }
     public function index(User $user)
     {
-        //$this->authorize('is_admin_logado', $user);
+        //$this->authorize('is_admin', $user);
         $this->authorize('ler', $this->routa);
         $title = 'Relatório de realidade social';
         $titulo = $title;
@@ -354,12 +354,12 @@ class RelatoriosController extends Controller
     }
     public function exportAll(User $user)
     {
-        $this->authorize('is_admin_logado', $user);
+        $this->authorize('is_admin', $user);
         return Excel::download(new FamiliasExport, 'Familias_'.date('d_m_Y').'.xlsx');
     }
     public function exportFilter(User $user)
     {
-        $this->authorize('is_admin_logado', $user);
+        $this->authorize('is_admin', $user);
         $dados = new SocialExportView;
         //return $dados->view();
         return Excel::download(new SocialExportView, 'Realidade_social_'.date('d_m_Y').'.xlsx');
@@ -373,7 +373,7 @@ class RelatoriosController extends Controller
         $estadocivil = new EstadocivilController($user);
         $lote = new LotesController($user);
         return [
-            'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'3','placeholder'=>''],
+            //'id'=>['label'=>'Id','active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'3','placeholder'=>''],
             'bairro'=>[
                 'label'=>'ÁREA',
                 'active'=>true,
@@ -394,23 +394,6 @@ class RelatoriosController extends Controller
             ],
             'quadra'=>['label'=>'QUADRA','active'=>true,'type'=>'array','exibe_busca'=>'d-block','tam'=>'4','tab'=>'quadras','valor'=>'quadra','select'=>'nome'],
             'matricula'=>['label'=>'MATRÍCULA','active'=>true,'type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'4','placeholder'=>''],
-            // 'etapa'=>[
-            //     'label'=>'Etapa',
-            //     'active'=>true,
-            //     'type'=>'select',
-            //     'data_selector'=>[
-            //         'campos'=>$etapa->campos(),
-            //         'route_index'=>route('etapas.index'),
-            //         'id_form'=>'frm-etapas',
-            //         'action'=>route('etapas.store'),
-            //         'campo_id'=>'id',
-            //         'campo_bus'=>'nome',
-            //         'label'=>'Etapa',
-            //     ],'arr_opc'=>Qlib::sql_array("SELECT id,nome FROM etapas WHERE ativo='s'",'nome','id'),'exibe_busca'=>'d-block',
-            //     'event'=>'',
-            //     'tam'=>'6',
-            //     'value'=>@$_GET['etapa'],
-            // ],
             'tags[]'=>[
                 'label'=>'SITUAÇÃO',
                 'active'=>true,

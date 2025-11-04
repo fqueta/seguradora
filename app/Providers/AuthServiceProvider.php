@@ -6,8 +6,6 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Auth\Access\Response;
 use App\Qlib\Qlib;
-use Illuminate\Auth\Notifications\VerifyEmail;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Auth;
 
 class AuthServiceProvider extends ServiceProvider
@@ -30,13 +28,6 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        Gate::define('is_dev', function ($user) {
-            if(($user->id_permission==1) && $user->ativo=='s'){
-                return Response::allow();
-            }else{
-                return Response::deny('Você deve ser um administrador.');
-            }
-        });
         Gate::define('is_admin', function ($user) {
             if(($user->id_permission==1 || $user->id_permission==2) && $user->ativo=='s'){
                 return Response::allow();
@@ -44,25 +35,44 @@ class AuthServiceProvider extends ServiceProvider
                 return Response::deny('Você deve ser um administrador.');
             }
         });
-        Gate::define('is_admin2', function ($user) {
-            if(($user->id_permission==1 || $user->id_permission==2 || $user->id_permission==3) && $user->ativo=='s'){
+
+        Gate::define('is_user_back', function ($user) {
+            if(($user->id_permission!=Qlib::qoption('id_permission_front')) && $user->ativo=='s'){
                 return Response::allow();
             }else{
-                return Response::deny('Você deve ser um administrador nivel 3.');
+                return Response::deny('Você deve ser um administrador..');
             }
         });
-        Gate::define('is_admin_logado', function ($user) {
-            if(($user->id_permission<=4) && $user->ativo=='s'){
+
+        Gate::define('is_partner', function ($user) {
+            if(($user->id_permission!=Qlib::qoption('partner_permission_id')) && $user->ativo=='s'){
                 return Response::allow();
             }else{
-                return Response::deny('Você deve estar logado como administrador.');
+                return Response::deny('Você deve ser um parceiro..');
             }
         });
-        Gate::define('is_customer_logado', function ($user) {
-            if(($user->id_permission==5) && $user->ativo=='s'){
-                return Response::allow();
+
+        Gate::define('is_user_front', function ($user) {
+            if(($user->id_permission==Qlib::qoption('id_permission_front')) && $user->ativo=='s'){
+                // if($user->verificado!='s'){
+                //     return Response::deny('Você deve ser um internauta com cadastro verificado entre em contato com o suporte.');
+                // }else{
+                    return Response::allow();
+                //}
             }else{
-                return Response::deny('Você deve estar logado como cliente.');
+                return Response::deny('Você deve ser um internauta com cadastro.');
+            }
+        });
+        Gate::define('is_user_front_v', function ($user) {
+            //para usuario front verificado
+            if(($user->id_permission==Qlib::qoption('id_permission_front')) && $user->ativo=='s'){
+                if($user->verificado!='s'){
+                    return Response::deny('Você deve ser um internauta com cadastro verificado entre em contato com o suporte.');
+                }else{
+                    return Response::allow();
+                }
+            }else{
+                return Response::deny('Você deve ser um internauta com cadastro.');
             }
         });
         Gate::define('is_logado', function ($user) {
@@ -73,7 +83,6 @@ class AuthServiceProvider extends ServiceProvider
                 return Response::deny('Você deve estar logado como cliente.');
             }
         });
-
         Gate::define('ler', function($user,$pagina=false){
             $ret = false;
             if($user->ativo=='s'){
@@ -140,13 +149,6 @@ class AuthServiceProvider extends ServiceProvider
                 }
             }
             return $ret;
-        });
-        VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
-            return (new MailMessage)
-                ->subject('Verifique seu e-mail')
-                ->greeting('Olá!')
-                ->line('Por favor clique no botão abaixo para verificar o seu endereço de E-mail. Através dele você receberá as notificações da plataforma de leilões.')
-                ->action('Verifique seu e-mail', $url);
         });
     }
 }

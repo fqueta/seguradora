@@ -21,6 +21,7 @@
         "sass-loader": "^11.0.1"
     },
     "dependencies": {
-        "dropzone": "^6.0.0-beta.2"
+        "dropzone": "^6.0.0-beta.2",
+        "sir-trevor": "^0.8.2"
     }
 }

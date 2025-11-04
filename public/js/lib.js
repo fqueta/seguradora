@@ -1,8 +1,6 @@
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 const pop = urlParams.get('popup');
-const RAIZ = '/';
-const domain = window.location.origin;
 function uniqid(prefix, more_entropy) {
   // +   original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
   // +    revised by: Kankrelune (http://www.webfaktory.info/)
@@ -57,6 +55,9 @@ function goToByScroll2(seletor) {
         scrollTop: $(seletor).offset().top
     }, 'slow');
 }
+function redirect(url) {
+  window.location = url;
+}
 function redirect_blank(url) {
   var a = document.createElement('a');
   a.target="_blank";
@@ -86,12 +87,11 @@ function lib_urlAmigavel(valor){
 }
 function encodeArray(arr){
     var ar = JSON.stringify(arr);
-    ar = ar.replace(' ', '+');
-    var encode = btoa(unescape(encodeURIComponent(ar)));
+    var encode = btoa(ar);
     return encode
 }
 function decodeArray(arr){
-	var decode = JSON.parse(decodeURIComponent(escape(atob(arr))));
+	var decode = JSON.parse(atob(arr));
 	return decode
 }
 function __translate(val,val2){
@@ -101,18 +101,8 @@ function lib_formatMensagem(locaExive,mess,style,tempo){
 	var mess = "<div class=\"alert alert-"+style+" alert-dismissable\" role=\"alert\"><button class=\"close\" type=\"button\" data-dismiss=\"alert\" aria-hidden=\"true\">X</button><i class=\"fa fa-exclamation-triangle\"></i>&nbsp;"+mess+"</div>";
 	if(typeof(tempo) == 'undefined')
 		var tempo = 4000;
-	setTimeout(function(){$(".alert").hide('slow')}, tempo);
-	$(locaExive).html(mess);
-}
-function lib_formatMensagem_front(locaExive,mess,style,tempo){
-	// var mess = "<div class=\"alert alert-"+style+" alert-dismissable\" role=\"alert\"><button class=\"close\" type=\"button\" data-dismiss=\"alert\" aria-hidden=\"true\">X</button><i class=\"fa fa-exclamation-triangle\"></i>&nbsp;"+mess+"</div>";
-    var mess = '<div class="alert alert-'+style+' alert-dismissible fade show" role="alert">'+
-                        mess+
-                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>'+
-                '</div>';
-	if(typeof(tempo) == 'undefined')
-		var tempo = 4000;
-	setTimeout(function(){$(".alert").hide('slow')}, tempo);
+    if(tempo>0)
+	setTimeout(function(){$(".alert-"+style+"").hide('slow')}, tempo);
 	$(locaExive).html(mess);
 }
 function abrirjanela(url, nome, w, h, param){
@@ -179,53 +169,11 @@ function abrirjanelaPadraoConsulta(url){
 	}
 	abrirjanela(url, "consultaCliente", wid, height, "left="+meio+",toolbar=no, location=no, directories=no, status=no, menubar=no");
 }
-
 function openPageLink(ev,url,ano){
   ev.preventDefault();
   var u = url.trim()+'?ano='+ano;
 	abrirjanelaPadrao(u);
 	//window.location = u;
-}
-function gerenteAtividade(obj,ac){
-  var id = obj.attr('id');
-  var temaImput = '<input type="{type}" {seletor} style="width:{wid}px" name="{name}" value="{value}" class="form-control text-center"> {btn}';
-  var arr = ['publicacao','video','hora','revisita','estudo','obs'];
-  var selId = $('#'+id);
-  var exec = selId.attr('exec');
-  if(exec=='s'){
-    return
-  }
-  for (var i = 0; i < arr.length; i++) {
-    var eq = (i+1);
-    var s = $('#'+id+' td:eq('+eq+')');
-    if(i==0){
-      selId.attr('exec','s');
-    }
-    if(i==5){
-       var wid='200';
-       var t='text';
-       var b='<button type="button" onclick="submitRelatorio(\''+id+'\',\''+ac+'\')" title="Salvar" class="btn btn-primary" name="button"><i class="fa fa-check"></i></button>'+
-       '<button type="button" onclick="cancelEdit(\''+id+'\')" title="Cancelar edição" data-toggle="tooltip"  class="btn btn-secondary" name="button"><i class="fa fa-times"></i></button>';
-			 if(ac=='alt'){
-				 b += '<button type="button" onclick="delRegistro(\''+id+'\')" title="Apagar registro" data-toggle="tooltip"  class="btn btn-danger" name="button"><i class="fa fa-trash"></i></button>';
-			 }
-       s.addClass('d-flex');
-    }else{
-      var wid='100';
-      var b='';
-      var t='number';
-    }
-    var v = s.html();
-    var c = temaImput.replace('{name}',id+arr[i]);
-    c = c.replace('{value}',v);
-    c = c.replace('{wid}',wid);
-    c = c.replace('{type}',t);
-    c = c.replace('{btn}',b);
-    c = c.replace('{seletor}',arr[i]);
-    s.html(c);
-    //array[i]
-  }
-  $('#'+id+' td:eq(1) input').select();
 }
 function cancelEdit(id,ac){
   //var temaImput = '<input type="{type}" style="width:{wid}px" name="{name}" value="{value}" class="form-control text-center"> {btn}';
@@ -257,152 +205,13 @@ function cancelEdit(id,ac){
     }else{
       var c = temaImput.replace('{value}',v);
     }
+    //c = c.replace('{value}',v);
+    //c = c.replace('{wid}',wid);
+    //c = c.replace('{type}',t);
+    //c = c.replace('{btn}',b);
     td.html(c);
   }
 }
-function delRegistro(id){
-  var don = $('#'+id+' input');
-  //console.log(don);
-  var arr = [];
-  var seriali = '';
-  $.each(don,function(i,k){
-    var ke = k.name;
-    ke = ke.replace(id,'');
-     arr[ke] = k.value;
-     seriali += ke+'='+k.value+'&';
-    //console.log(k.name);
-  });
-  //var var_cartao = atob(arr['var_cartao']);
-    $.ajaxSetup({
-         headers: {
-             'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
-         }
-     });
-
-     var formData = seriali,state = jQuery('#btn-save').val();
-     if(ac=='del'){
-       var type = "DELETE";
-     }else{
-       var type = "POST";
-     }
-     var ac='del',ajaxurl = $('[name="routAjax_'+ac+'"]').val();
-     $.ajax({
-         type: type,
-         url: ajaxurl,
-         data: formData,
-         dataType: 'json',
-         success: function (data) {
-
-           if(data.exec){
-             cancelEdit(id,'del');
-             if(data.mens){
-               lib_formatMensagem('.mens',data.mens,'success');
-             }
-           }else{
-             lib_formatMensagem('.mens',data.mens,'danger');
-           }
-           if(data.cartao.totais){
-             var array = data.cartao.totais;
-             var id_pub = data.cartao.dados.id;
-             var eq = 1;
-             $.each(array,function(i,k){
-                $('#pub-'+id_pub+' .tf-1 th:eq('+(eq)+')').html(k);
-               eq++;
-             });
-           }
-           if(data.cartao.medias){
-             var array = data.cartao.medias;
-             var id_pub = data.cartao.dados.id;
-             var eq = 1;
-             $.each(array,function(i,k){
-                $('#pub-'+id_pub+' .tf-2 th:eq('+(eq)+')').html(k);
-               eq++;
-             });
-           }
-           if(data.salvarRelatorios.obs && data.salvarRelatorios.mes){
-             var selector = '#'+id_pub+'_'+data.salvarRelatorios.mes+' td';
-             $(selector).last().html(data.salvarRelatorios.obs);
-           }
-
-         },
-         error: function (data) {
-             console.log(data);
-         }
-     });
-}
-/*
-function submitRelatorio(id,ac){
-  var don = $('#'+id+' input');
-  console.log(don);
-  var arr = [];
-  var seriali = '';
-  $.each(don,function(i,k){
-    var ke = k.name;
-    ke = ke.replace(id,'');
-     arr[ke] = k.value;
-     seriali += ke+'='+k.value+'&';
-    //console.log(k.name);
-  });
-  var var_cartao = atob(arr['var_cartao']);
-    $.ajaxSetup({
-           headers: {
-               'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
-           }
-       });
-
-       var formData = seriali+'compilado=s';
-       var state = jQuery('#btn-save').val();
-       if(ac=='cad'){
-         var type = "POST";
-       }else{
-         var type = "POST";
-       }
-       var ajaxurl = $('[name="routAjax_'+ac+'"]').val();
-       $.ajax({
-           type: type,
-           url: ajaxurl,
-           data: formData,
-           dataType: 'json',
-           success: function (data) {
-             if(data.exec){
-               cancelEdit(id);
-							 if(data.mens){
-								 lib_formatMensagem('.mens',data.mens,'success');
-							 }
-						 }else{
-							 lib_formatMensagem('.mens',data.mens,'danger');
-						 }
-             if(data.cartao.totais){
-               var array = data.cartao.totais;
-               var id_pub = data.cartao.dados.id;
-               var eq = 1;
-               $.each(array,function(i,k){
-                  $('#pub-'+id_pub+' .tf-1 th:eq('+(eq)+')').html(k);
-                 eq++;
-               });
-             }
-             if(data.cartao.medias){
-               var array = data.cartao.medias;
-               var id_pub = data.cartao.dados.id;
-               var eq = 1;
-               $.each(array,function(i,k){
-                  $('#pub-'+id_pub+' .tf-2 th:eq('+(eq)+')').html(k);
-                 eq++;
-               });
-             }
-             if(data.salvarRelatorios.obs && data.salvarRelatorios.mes){
-               var selector = '#'+id_pub+'_'+data.salvarRelatorios.mes+' td';
-               $(selector).last().html(data.salvarRelatorios.obs);
-             }
-
-           },
-           error: function (data) {
-               console.log(data);
-           }
-       });
-  //console.log(arr);
-}
-*/
 function alerta(msg,id,title,tam,fechar,time,fecha){
 
 	if(typeof(fechar) == 'undefined')
@@ -435,54 +244,11 @@ function alerta(msg,id,title,tam,fechar,time,fecha){
                 '</div>'+
             '</div>'+
         '</div>';
-
         $('#'+id).remove();
-        var bodys = $(document.body).append(modalHtml);
+	  var bodys = $(document.body).append(modalHtml);
 
-        $("#"+id).modal({backdrop: 'static'});
-    if(fecha == true)
-	setTimeout(function(){$("#"+id).modal("hide")}, time);
-}
-function alerta2(msg,id,title,tam,fechar,time,fecha){
-
-	if(typeof(fechar) == 'undefined')
-        fechar = true;
-    if(typeof(title) == 'undefined')
-    title = 'Janela modal';
-    if(typeof(fecha) != 'undefined')
-        fecha = fecha;
-    else
-        fecha = '';
-	if(typeof(id) == 'undefined')
-    id = 'meuModal';
-	if(typeof(tam) == 'undefined')
-    tam = '';
-	if(typeof(time) == 'undefined')
-        time = 2000;
-    if(fechar)
-        fechar = '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button></div>';
-    var modalHtml = '<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">'+
-    '<div class="modal-dialog">'+
-        '<div class="modal-content">'+
-        '<div class="modal-header">'+
-            '<h5 class="modal-title" id="exampleModalLabel">Modal title</h5>'+
-            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'+
-        '</div>'+
-        '<div class="modal-body">'+
-        '</div>'+
-        '<div class="modal-footer">'+
-            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>'+
-            '<button type="button" class="btn btn-primary">Save changes</button>'+
-        '</div>'+
-        '</div>'+
-    '</div>'+
-    '</div>';
-
-        $('#'+id).remove();
-        var bodys = $(document.body).append(modalHtml);
-        var myModal = document.getElementById(id)
-        myModal.modal({backdrop: 'static'});
-    if(fecha == true)
+	  $("#"+id).modal({backdrop: 'static'});
+	if(fecha == true)
 	setTimeout(function(){$("#"+id).modal("hide")}, time);
 }
 function alerta5(msg,id,title,tam,fechar,time,fecha){
@@ -502,33 +268,42 @@ function alerta5(msg,id,title,tam,fechar,time,fecha){
         time = 2000;
     if(fechar)
         fechar = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>';
-    var html = '<div class="modal fade" id="'+id+'" tabindex="-1" data-bs-backdrop="static">'+
-    '<div class="modal-dialog '+tam+'">'+
-      '<div class="modal-content">'+
-        '<div class="modal-header">'+
-          '<h5 class="modal-title">'+title+'</h5>'+
-          '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'+
-        '</div>'+
-        '<div class="modal-body">'+
-          msg+
-        '</div>'+
-        '<div class="modal-footer">'+
-          fechar+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-  '</div>';
-  // var myInput = document.getElementById('myInput')
-  $('#'+id).remove();
-  $(html).insertAfter('header');
-//   var myModal = new bootstrap.Modal(document.getElementById(id), {});
-//     document.onreadystatechange = function () {
-//         myModal.show();
-//     };
-    let modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(id)) // Returns a Bootstrap modal instance
-    // Show or hide:
-    modal.show();
-    modal.hide()
+        var html = '<div class="modal fade" id="'+id+'" tabindex="-1" data-bs-backdrop="static">'+
+        '<div class="modal-dialog '+tam+'">'+
+            '<div class="modal-content">'+
+                '<div class="modal-header">'+
+                '<h5 class="modal-title">'+title+'</h5>'+
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'+
+                '</div>'+
+                '<div class="modal-body">'+
+                msg+
+                '</div>'+
+                '<div class="modal-footer">'+
+                fechar+
+                '</div>'+
+            '</div>'+
+            '</div>'+
+        '</div>';
+    // var myInput = document.getElementById('myInput')
+    $('#'+id).remove();
+    $(html).insertAfter('header');
+    // let modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(id)) // Returns a Bootstrap modal instance
+    // // Show or hide:
+    // modal.show();
+    // modal.hide()
+}
+function alerta52(msg,title,funCall){
+    if(typeof(fechar) == 'undefined')
+        fechar = true;
+    if(typeof funCall == 'undefined'){
+        funCall = function(ev){
+            console.log(ev);
+        }
+    }// var sel = document.querySelector();
+    document.querySelector('#modal-ms-title').innerHTML = title;
+    document.querySelector('#modal-mensagem').querySelector('.modal-body').innerHTML = msg;
+    document.querySelector('[data-bs-target="#modal-mensagem"]').click();
+    funCall();
 }
 function editarAssistencia(obj){
     var sele = obj.attr('sele');
@@ -572,7 +347,63 @@ function cancelEditAssistencia(frm,qtd){
   //nv = nv.replace('{id}',id);
   s.html(nv);
 }
+function salvarAssitencia(frm,dados){
+  //var var_cartao = atob(arr['var_cartao']);
+        $.ajaxSetup({
+           headers: {
+               'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
+           }
+       });
 
+       //var state = jQuery('#btn-save').val();
+       var f = $('#'+frm);
+       var ac = f.find('[name="ac"]').val();
+       var RAIZ = $('[name="raiz"]').val();
+       if(ac=='cad'){
+         var type = "POST";
+         var ajaxurl = RAIZ+'/assistencias';
+       }else{
+         var id = f.find('[name="id"]').val();
+         var type = "POST";
+         var ajaxurl = RAIZ+"/assistencias/"+id;
+       }
+       $.ajax({
+           type: type,
+           url: ajaxurl,
+           data: f.serialize()+'&dados='+dados,
+           dataType: 'json',
+           success: function (data) {
+             if(data.exec){
+               cancelEditAssistencia(frm,data.data.qtd);
+							 if(data.mens){
+								 lib_formatMensagem('.mens',data.mens,'success');
+							 }
+						 }else{
+							 lib_formatMensagem('.mens',data.mens,'danger');
+						 }
+             if(data.data.dados[0].semanas[6].qtd){
+               var totalR1 = data.data.dados[0].semanas[6].qtd;
+               $('[sele="total_0_6"] span').html(totalR1);
+             }
+             if(data.data.dados[0].semanas[7].qtd){
+               var mediaR1 = data.data.dados[0].semanas[7].qtd;
+               $('[sele="media_0_7"] span').html(mediaR1);
+             }
+             if(data.data.dados[1].semanas[6].qtd){
+               var totalR1 = data.data.dados[1].semanas[6].qtd;
+               $('[sele="total_1_6"] span').html(totalR1);
+             }
+             if(data.data.dados[1].semanas[7].qtd){
+               var mediaR1 = data.data.dados[1].semanas[7].qtd;
+               $('[sele="media_1_7"] span').html(mediaR1);
+             }
+
+           },
+           error: function (data) {
+               console.log(data);
+           }
+       });
+}
 function mask(o, f) {
 	setTimeout(function() {
 		var v = clientes_mascaraTelefone(o.value);
@@ -597,16 +428,18 @@ function clientes_mascaraTelefone(v) {
 }
 function confirmDelete(obj){
     var id = obj.data('id');
-    if(window.confirm('DESEJA MESMO EXCLUIR?')){
+    if(window.confirm('DESEJA EXCLUIR O CADASTRO?\n\nAo prosseguir com esta ação todas as informações serão excluídas permanentemente!!')){
         // $('#frm-'+id).submit();
         submitFormulario($('#frm-'+id),function(res){
             if(res.mens){
                 lib_formatMensagem('.mens',res.mens,res.color);
             }
             if(res.return){
-                $('#tr_'+id).remove();
-                // location.reload();
+                location.reload();
                 //window.location = res.return
+            }
+            if(res.exec){
+                $('#tr_'.id).remove();
             }
             if(res.errors){
                 alert('erros');
@@ -703,21 +536,24 @@ function lib_trataRemoveUrl(campo,valor,urlinic){
 	}
 	return ret;
 }
-function visualizaArquivos(token_produto,ajaxurl){
-
+function visualizaArquivos(token_produto,ajaxurl,painel){
+    if(typeof painel=='undefined'){
+        painel = '';
+    }
     $.ajax({
         type: 'GET',
         url: ajaxurl,
         data: {
-            token_produto:token_produto,
+            token_produto:token_produto,//ou post_id
         },
         dataType: 'json',
         success: function (data) {
 
           if(data.exec && data.arquivos){
-            var list = listFiles(data.arquivos,token_produto);
+            var list = listFiles(data.arquivos,token_produto,painel);
             $('#lista-files').html(list);
-            //$(".venobox").venobox();
+            $( ".sortable" ).sortable();
+
             if(data.mens){
               lib_formatMensagem('.mens',data.mens,'success');
             }
@@ -730,79 +566,184 @@ function visualizaArquivos(token_produto,ajaxurl){
         }
     });
 }
-function listFiles(arquivos,token_produto){
+function visualizaArquivos2(token_produto,ajaxurl,painel){
+    if(typeof painel=='undefined'){
+        painel = 'biddings';
+    }
+    $.ajax({
+        type: 'GET',
+        url: ajaxurl,
+        data: {
+            token_produto:token_produto,//ou post_id
+            local:'biddings',//ou post_id
+        },
+        dataType: 'json',
+        success: function (data) {
+
+          if(data.exec && data.arquivos){
+            var list = listFiles(data.arquivos,token_produto,painel);
+            $('#lista-files').html(list);
+            $( ".sortable" ).sortable();
+            if(data.mens){
+              lib_formatMensagem('.mens',data.mens,'success');
+            }
+          }else{
+            lib_formatMensagem('.mens',data.mens,'danger');
+          }
+        },
+        error: function (data) {
+            console.log(data);
+        }
+    });
+}
+function listFiles(arquivos,token_produto,painel){
     if(typeof token_produto == 'undefined'){
         token_produto = '';
     }
-    if(arquivos.length>0){
-        var tema1 = '<ul class="list-group">{li}</ul>';
-        var tm2 = '<li class="list-group-item d-flex justify-content-between align-items-center" id="item-{id}">'+
-                        '<div class="row w-100">'+
-        '                    <div class="col-3 grade-img text-center">'+
-        '                        <a href="{href}" target="_blank" rel=""><i class="fas fa-file-download fa-2x"></i>'+
-        '                        </a>'+
-        '                    </div>'+
-        '                    <div class="col-9">'+
-        '                        <a href="{href}" target="_blank" rel="">{nome}'+
-        '                        </a>'+
-        '                    </div>'+
-        '                </div>'+
-        '                <button type="button" {event} class="btn btn-default" title="Excluir"><i class="fas fa-trash"></i></button>'+
-        '            </li>';
-        var tm3 = '<li class="list-group-item d-flex justify-content-between align-items-center" id="item-{id}">'+
-                        '<div class="row w-100">'+
-        '                    <div class="col-3 grade-img text-center">'+
-        '                        <a href="{href}" target="_blank" class="venobox vbox-item" title="{nome}" data-maxwidth="80%" data-max="80%" ><img class="shadow w-100" src="{href}" alt="{nome}">'+
-        '                        </a>'+
-        '                    </div>'+
-        '                    <div class="col-9">'+
-        '                        {nome}'+
-        '                        '+
-        '                    </div>'+
-        '                </div>'+
-        '                <button type="button" {event} class="btn btn-default" title="Excluir"><i class="fas fa-trash"></i></button>'+
-        '            </li>';
-        var li = '';
-        var temaIcon = '<i class="fas fa-file-{tipo} fa-2x"></i>';
-        for (let i = 0; i < arquivos.length; i++) {
-            var icon = '';
-            let arq = arquivos[i];
-            if(conf = arq.config){
-                var config = JSON.parse(conf);
-                if(config.extenssao == 'jpg' || config.extenssao=='png' || config.extenssao == 'jpeg'){
-                    var tipo = 'image';
-                }else if(config.extenssao == 'doc' || config.extenssao == 'docx') {
-                    var tipo = 'word';
-                }else if(config.extenssao == 'xls' || config.extenssao == 'xlsx') {
-                    var tipo = 'excel';
-                }else{
-                    var tipo = 'download';
-                }
-                icon = temaIcon.replace('{tipo}',tipo);
-            }
-            if(tipo=='image'){
-                var tema2=tm3;
-            }else{
-                var tema2=tm2;
-            }
-            var event = 'onclick="excluirArquivo(\''+arq.id+'\',\'/uploads/'+arq.id+'\')"';
-            var href = '/storage/'+arq.pasta;
-            //var href = 'https://cmd.databrasil.app.br/storage/'+arq.pasta;
-            li += tema2.replaceAll('{event}',event);
-            li = li.replaceAll('{nome}',arq.nome);
-            li = li.replaceAll('{id}',arq.id);
-            li = li.replaceAll('{href}',href);
-            li = li.replaceAll('{icon}',icon);
-        }
-        ret = tema1.replace('{li}',li);
-        return ret;
-
+    if(typeof painel == 'undefined'){
+        painel = '';
     }
+    var ret = __translate('Nenhum arquivo');
+    if(arquivos.length>0){
+        try {
+
+            if(painel=='i_wp'){
+                var tema1 = '<div class="list-group">{li}</div>';
+                var tema2 = '<div class="list-group-item d-flex justify-content-between align-items-center px-0" id="item-{id}">'+
+                '<a href="{href}" class="venobox"><img src="{href}" alt="{nome}" style="width: 100%"></a>'+
+                '<span style="position: absolute;top:2px;right:2px">'+
+                '<button type="button" {event} class="btn btn-default" title="Excluir"><i class="fas fa-trash "></i></button>'+
+                '</span>'+
+                '</div>';
+            }else if(painel=='biddings'){
+                var tema1 = '<form id="files"><table class="table"><thead><tr><th title="'+__translate('Visualizar')+'">Ver</th><th>Nome</th><th>Ação</th></tr></thead><tbody class="sortable">{li}</tbody></table></form>';
+                var tema2 = '<tr class="" id="item-{id}">'+
+                '<td class="pl-0 pr-0"> <i class="fas fa-arrows-alt-v mr-2" style="cursor:pointer" title="'+__translate('Arraste e solte para mudar a ordem')+'"></i> <a href="{href}" title="'+__translate('Ver o arquivo')+'" target="_blank">{icon}</a></td>'+
+                '<td style=""><input type="hidden" name="order[]" value="{id}" /><input title="'+__translate('Editar o nome do arquivo')+'" type="text" value="{nome}" name="file[{id}][title]" class="form-control" /></td>'+
+                '<td style="" class="text-right"><button {event_edit} type="button" title="'+__translate('Gravar o nome do arquivo')+'" class="btn btn-outline-secondary mr-1"><i class="fa fa-check"></i></button><button  title="'+__translate('Excluir o arquivo')+'" type="button" {event} class="btn btn-outline-danger" title="Excluir"><i class="fas fa-trash "></i></button></td>'+
+                '</tr>';
+            }else{
+                // var tema1 = '<ul class="list-group">{li}</ul>';
+                // var tema2 = '<li class="list-group-item d-flex justify-content-between align-items-center" id="item-{id}">'+
+                // '<a href="{href}" target="_blank">{icon} {nome}</a>'+
+                // '<button type="button" {event} class="btn btn-default" title="Excluir"><i class="fas fa-trash "></i></button></li>';
+                var tema1 = '<form id="files"><table class="table"><thead><tr><th title="'+__translate('Visualizar')+'">Ver</th><th>Nome</th><th>Ação</th></tr></thead><tbody class="sortable">{li}</tbody></table></form>';
+                var tema2 = '<tr class="" id="item-{id}">'+
+                '<td class="pl-0 pr-0"> <i class="fas fa-arrows-alt-v mr-2" style="cursor:pointer" title="'+__translate('Arraste e solte para mudar a ordem')+'"></i> <a href="{href}" title="'+__translate('Ver o arquivo')+'" target="_blank">{icon}</a></td>'+
+                '<td style=""><input type="hidden" name="ordem[]" value="{id}" /><input title="'+__translate('Editar o nome do arquivo')+'" type="text" value="{nome}" name="file[{id}][title]" class="form-control" /></td>'+
+                '<td style="" class="text-right"><button {event_edit} type="button" title="'+__translate('Gravar o nome do arquivo')+'" class="btn btn-outline-secondary mr-1"><i class="fa fa-check"></i></button><button  title="'+__translate('Excluir o arquivo')+'" type="button" {event} class="btn btn-outline-danger" title="Excluir"><i class="fas fa-trash "></i></button></td>'+
+                '</tr>';
+
+            }
+            var li = '';
+            var temaIcon = '<i class="fas fa-file{tipo} fa-2x"></i>',tenant_asset=document.getElementById('tenant_asset').value;
+            for (let index = 0; index < arquivos.length; index++) {
+                const arq = arquivos[index];
+                if(painel=='i_wp'){
+                    var href = arq.guid;
+                    var id = arq.ID;
+                }else if(painel=='biddings'){
+                    var href = tenant_asset+'/'+arq.file_path;
+                    var id = arq.id;
+                }else{
+                    var id = arq.id;
+                    var href = tenant_asset+'/'+arq.pasta;
+                    // var href = '/storage/'+arq.pasta;
+                }
+                console.log(arq);
+                console.log(tenant_asset);
+
+                var event = 'onclick="excluirArquivo(\''+id+'\',\''+painel+'\')"',event_edit = 'onclick="save_name_attachment(\''+id+'\');"';
+                var icon = '';
+                if(painel=='biddings'){
+                    li += tema2.replaceAll('{event}',event);
+                    li = li.replaceAll('{event_edit}',event_edit);
+                    li = li.replaceAll('{nome}',arq.title);
+                    li = li.replaceAll('{order}',arq.order);
+                    li = li.replaceAll('{id}',id);
+                    li = li.replaceAll('{href}',href);
+                    var tfr = arq.extension;
+                    if(tfr=='pdf' || tfr=='PDF'){
+                        var tipo = '-pdf';
+                    }else if(tfr=='docx' || tfr=='doc'){
+                        var tipo = '-word';
+                    }else if(tfr=='xls' || tfr=='xlsx'){
+                        var tipo = '-excel';
+                    }else if(tfr=='jpg' || tfr=='png' || tfr=='jpeg'){
+                        var tipo = '-image';
+                    }else{
+                        var tipo = '';
+                    }
+                    icon = temaIcon.replace('{tipo}',tipo);
+                }else{
+                    event_edit = 'onclick="save_name_attachment(\''+id+'\',\'uploads\');"'
+                    li += tema2.replaceAll('{event}',event);
+                    li = li.replaceAll('{event_edit}',event_edit);
+                    li = li.replaceAll('{nome}',arq.nome);
+                    li = li.replaceAll('{order}',arq.ordem);
+                    li = li.replaceAll('{id}',id);
+                    li = li.replaceAll('{href}',href);
+                    var tfr = arq.extension;
+                    if(tfr=='pdf' || tfr=='PDF'){
+                        var tipo = '-pdf';
+                    }else if(tfr=='docx' || tfr=='doc'){
+                        var tipo = '-word';
+                    }else if(tfr=='xls' || tfr=='xlsx'){
+                        var tipo = '-excel';
+                    }else if(tfr=='jpg' || tfr=='png' || tfr=='jpeg'){
+                        var tipo = '-image';
+                    }else{
+                        var tipo = '';
+                    }
+                    icon = temaIcon.replace('{tipo}',tipo);
+                }
+                if(painel=='i_wp'){
+                    if(conf = arq.config){
+                        var config = JSON.parse(conf);
+                        if(config.extenssao == 'jpg' || config.extenssao=='png' || config.extenssao == 'jpeg'){
+                            var tipo = '-image';
+                        }else if(config.extenssao == 'doc' || config.extenssao == 'docx') {
+                            var tipo = '-word';
+                        }else if(config.extenssao == 'xls' || config.extenssao == 'xlsx') {
+                            var tipo = '-excel';
+                        }else{
+                            var tipo = '-download';
+                        }
+                        icon = temaIcon.replace('{tipo}',tipo);
+                    }
+                }
+                li = li.replace('{icon}',icon);
+            }
+            ret = tema1.replace('{li}',li);
+        } catch (error) {
+            ret = 'erro ao renderizar lista entre em contato com o suporte';
+            console.log(error);
+        }
+    }
+    return ret;
 }
-function excluirArquivo(id,ajaxurl){
+function list_arquivos_biddings(sel){
+    console.log(sel);
+
+    var code_arquivos = document.querySelector(sel).value,arquivos = decodeArray(code_arquivos);
+    var mont_file = listFiles(arquivos,false,'biddings');
+    console.log(arquivos);
+    document.querySelector('#lista-files').innerHTML = mont_file;
+    $( ".sortable" ).sortable();
+}
+function list_arquivos(sel){
+    var code_arquivos = document.querySelector(sel).value,arquivos = decodeArray(code_arquivos);
+    var mont_file = listFiles(arquivos,false);
+    console.log(arquivos);
+    document.querySelector('#lista-files').innerHTML = mont_file;
+    $( ".sortable" ).sortable();
+}
+function save_name_attachment(id,local){
+    var title = document.querySelector('[name="file['+id+'][title]"]').value;
+    ajaxurl = '/admin/ajax/attachments/'+id
     $.ajaxSetup({
         headers: {
-            'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
+           'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
         }
     });
     $.ajax({
@@ -810,16 +751,40 @@ function excluirArquivo(id,ajaxurl){
         url: ajaxurl,
         data: {
             id:id,
+            nome:title,
+            local:local,
         },
         dataType: 'json',
         success: function (data) {
-
-          if(data.exec){
-            //cancelEdit(id,'del');
-            $('#item-'+id).remove();
-            if(data.dele_file){
-              lib_formatMensagem('.mens','Arquivo excluido com sucesso!','success');
-            }
+            lib_formatMensagem('.mens',data.mens,data.color);
+        },
+        error: function (data) {
+            console.log(data);
+        }
+    });
+}
+function excluirArquivo(id,painel){
+    var ajaxurl = '/admin/uploads/'+id+'/delete';
+    $.ajaxSetup({
+        headers: {
+           'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
+        }
+    });
+    $.ajax({
+        type: 'POST',
+        url: ajaxurl,
+        data: {
+            id:id,
+            painel:painel,
+        },
+        dataType: 'json',
+        success: function (data) {
+           if(data.exec){
+                if(data.dele_file){
+                   lib_formatMensagem('.mens','Arquivo excluido com sucesso!','success');
+                   $('#item-'+id).remove();
+                   $('#enviar-arquivo').show();
+                }
           }else{
             lib_formatMensagem('.mens','Erro ao excluir entre em contato com o suporte','danger');
           }
@@ -834,7 +799,7 @@ function excluirArquivo(id,ajaxurl){
 function carregaDropZone(seletor){
     $(seletor).dropzone({ url: "/file/post" });
 }
-function submitFormulario(objForm,funCall,funError){
+function submitFormulario(objForm,funCall,funError,compleUrl){
     if(typeof funCall == 'undefined'){
         funCall = function(res){
             console.log(res);
@@ -845,51 +810,88 @@ function submitFormulario(objForm,funCall,funError){
             lib_funError(res);
         }
     }
+    if(typeof compleUrl == 'undefined'){
+        compleUrl='';
+    }
     var route = objForm.attr('action');
-    objForm.validate({
-        submitHandler: function(form) {
-            $.ajax({
-                type: 'POST',
-                url: route,
-                data: objForm.serialize()+'&ajax=s',
-                dataType: 'json',
-                beforeSend: function(){
-                    $('#preload').fadeIn();
-                },
-                success: function (data) {
-                    $('#preload').fadeOut("fast");
-                    funCall(data);
-                },
-                error: function (err) {
-                    $('#preload').fadeOut("fast");
-                    try {
-                        if(err.responseJSON.errors){
-                            funError(err.responseJSON.errors);
-                            console.log(err.responseJSON.errors);
-                        }else{
-                            lib_formatMensagem('.mens','Erro','danger');
-                        }
-                        if (err.status == 422) { // when status code is 422, it's a validation issue
-                            console.log(err.responseJSON);
-                            $('#success_message').fadeIn().html(err.responseJSON.message);
-
-                            // you can loop through the errors object and show it to the user
-                            console.warn(err.responseJSON.errors);
-                            // display errors on each form field
-                            $.each(err.responseJSON.errors, function (i, error) {
-                                var el = $(document).find('[name="'+i+'"]');
-                                $('#el-'+i).remove();
-                                el.after($('<span id="el-'+i+'" style="color: red;font-size:12px">'+error[0]+'</span>'));
-                            });
-                        }
-                    } catch (e) {
-                        console.log(e);
-                    }
-                }
-            });
+    //console.log(route);
+    $.ajax({
+        type: 'POST',
+        url: route,
+        data: objForm.serialize()+'&ajax=s'+compleUrl,
+        dataType: 'json',
+        beforeSend: function(){
+            $('#preload').fadeIn();
+        },
+        success: function (data) {
+            $('#preload').fadeOut("fast");
+            funCall(data);
+        },
+        error: function (data) {
+            $('#preload').fadeOut("fast");
+            if(data.responseJSON.errors){
+                funError(data.responseJSON.errors);
+                console.log(data.responseJSON.errors);
+            }else{
+                lib_formatMensagem('.mens','Erro','danger');
+            }
         }
     });
-    objForm.submit();
+}
+function submitFormFile(objForm,funCall,funError,compleUrl){
+    if(typeof funCall == 'undefined'){
+        funCall = function(res){
+            console.log(res);
+        }
+    }
+    if(typeof funError == 'undefined'){
+        funError = function(res){
+            lib_funError(res);
+        }
+    }
+    if(typeof compleUrl == 'undefined'){
+        compleUrl='';
+    }
+    var formData = new FormData();
+    var files = $('input[type=file]');
+    for (var i = 0; i < files.length; i++) {
+        if (files[i].value != "" || files[i].value != null) {
+            formData.append(files[i].name, files[i].files[0]);
+        }
+    }
+    var formSerializeArray = objForm.serializeArray();
+    for (var i = 0; i < formSerializeArray.length; i++) {
+        formData.append(formSerializeArray[i].name, formSerializeArray[i].value)
+    }
+    formData.append('ajax','s');
+    var route = objForm.attr('action');
+    //console.log(route);
+    $.ajax({
+        type: 'POST',
+        url: route,
+        //data: formData+'&ajax=s'+compleUrl,
+        data: formData,
+        dataType: 'json',
+        beforeSend: function(){
+            $('#preload').fadeIn();
+        },
+        cache: false,
+        contentType: false,
+        processData: false,
+        success: function (data) {
+            $('#preload').fadeOut("fast");
+            funCall(data);
+        },
+        error: function (data) {
+            $('#preload').fadeOut("fast");
+            if(data.responseJSON.errors){
+                funError(data.responseJSON.errors);
+                console.log(data.responseJSON.errors);
+            }else{
+                lib_formatMensagem('.mens','Erro','danger');
+            }
+        }
+    });
 }
 function getAjax(config,funCall,funError){
 
@@ -961,68 +963,55 @@ function submitFormularioCSRF(objForm,funCall,funError){
         }
     }
     var route = objForm.attr('action');
-    objForm.validate({
-        submitHandler: function(form) {
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
-                }
-            });
-            $.ajax({
-                type: 'POST',
-                url: route,
-                data: objForm.serialize()+'&ajax=s',
-                dataType: 'json',
-                beforeSend: function(){
-                    $('#preload').fadeIn();
-                },
-                success: function (data) {
-                    $('#preload').fadeOut("fast");
-                    funCall(data);
-                },
-                error: function (data) {
-                    $('#preload').fadeOut("fast");
-                    try {
-                        console.log(data);
-                        if(data.responseJSON.errors){
-                            funError(data.responseJSON.errors);
-                        }else{
-                            lib_formatMensagem('.mens','Erro','danger');
-                        }
-
-                    } catch (error) {
-                        console.log(error);
-                    }
-                }
-            });
+    console.log(route);
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
         }
     });
-    objForm.submit();
+    $.ajax({
+        type: 'POST',
+        url: route,
+        data: objForm.serialize()+'&ajax=s',
+        dataType: 'json',
+        beforeSend: function(){
+            $('#preload').fadeIn();
+        },
+        success: function (data) {
+            $('#preload').fadeOut("fast");
+            funCall(data);
+        },
+        error: function (data) {
+            $('#preload').fadeOut("fast");
+            if(data.responseJSON.errors){
+                funError(data.responseJSON.errors);
+                console.log(data.responseJSON.errors);
+            }else{
+                lib_formatMensagem('.mens','Erro','danger');
+            }
+        }
+    });
 }
 function lib_funError(res){
-    // var mens = '';
-    // Object.entries(res).forEach(([key, value]) => {
-    //     //console.log(key + ' ' + value);
-    //     var s = $('[name="'+key+'"]');
-    //     var v = s.val();
-    //     mens += value+'<br>';
-    //     if(key=='cpf'){
-    //        s.addClass('is-invalid');
-    //     }else{
-    //         if(v=='')
-    //             s.addClass('is-invalid');
-    //         else{
-    //             s.removeClass('is-invalid');
-    //         }
-    //     }
-    // });
-    // lib_formatMensagem('.mens',mens,'danger');
     var mens = '';
-    for (const [key, value] of Object.entries(res)) {
+    Object.entries(res).forEach(([key, value]) => {
+        //console.log(key + ' ' + value);
+        var s = $('[name="'+key+'"]');
+        var v = s.val();
         mens += value+'<br>';
-        console.log(`${key}: ${value}`);
-    }
-    lib_formatMensagem('.mens',mens,'danger');
+        if(key=='cpf'){
+           s.addClass('is-invalid');
+        }else{
+            if(v=='')
+                s.addClass('is-invalid');
+            else{
+                s.removeClass('is-invalid');
+            }
+        }
+        console.log(s);
+    });
+    lib_formatMensagem('.mens',mens,'danger',0);
+
 }
 function modalGeral(id,titulo,conteudo){
     var m = $(id);
@@ -1036,6 +1025,8 @@ function renderForm(config,alvo,funCall){
         return ;
     }
     var d = config;
+
+    console.log(d);
     if(d.campos){
         var f = qFormCampos(d.campos);
         if(f){
@@ -1050,6 +1041,7 @@ function renderForm(config,alvo,funCall){
             $(b).insertAfter(m+' .modal-footer button');
             try {
                 $('[mask-cpf]').inputmask('999.999.999-99');
+                $('[mask-cnpj]').inputmask('99.999.999/9999-99');
                 $('[mask-data]').inputmask('99/99/9999');
                 $('[mask-cep]').inputmask('99.999-999');
                 if(n=d.value_transport){
@@ -1153,14 +1145,16 @@ function qFormCampos(config){
     const tl = '<label for="{campo}">{label}</label>';
     var tema = {
         text : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
-        moeda : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control moeda {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
+        color : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
+        email : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
         tel : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
         date : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
         number : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
+        moeda : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
         hidden : '<div class="form-group col-{col}-{tam} {class_div} d-none" div-id="{campo}" >{label}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
-        textarea : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" ><textarea name="{campo}" class="form-control {class}" rows="{rows}" cols="{cols}">{value}</textarea></div>',
+        hidden_text : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" ><b>{label}</b>: {value_text}<input type="{type}" class="form-control {class}" id="inp-{campo}" name="{campo}" aria-describedby="{campo}" placeholder="{placeholder}" value="{value}" {event} /></div>',
+        textarea : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<textarea name="{campo}" class="form-control {class}" rows="{rows}" cols="{cols}">{value}</textarea></div>',
         chave_checkbox : '<div class="form-group col-{col}-{tam}"><div class="custom-control custom-switch  {class}"><input type="checkbox" class="custom-control-input" {checked} value="{value}"  name="{campo}" id="{campo}"><label class="custom-control-label" for="{campo}">{label}</label></div></div>',
-        checkbox : '<div class="form-group col-{col}-{tam}"><label for="{campo}"><input type="checkbox" {checked} value="{value}"  name="{campo}" id="{campo}">{label}</label></div>',
         select : {
             tm1 : '<div class="form-group col-{col}-{tam} {class_div}" div-id="{campo}" >{label}<select name="{campo}" {event} class="form-control custom-select {class}">{op}</select></div>',
             tm2 : '<option value="{k}" class="opcs" {selected}>{v}</option>'
@@ -1168,7 +1162,6 @@ function qFormCampos(config){
     };
     var r = '';
     var ret = '';
-    console.log(config);
     if(Object.entries(config).length>0){
         Object.entries(config).forEach(([key, v]) => {
             if(v.js || v.active){
@@ -1189,7 +1182,6 @@ function qFormCampos(config){
                     var label = tl.replaceAll('{campo}',key);
                     label.replaceAll('{label}',);
                     var classe = v.class?v.class:'';
-                    var class_div = v.class_div?v.class_div:'';
                     var placeholder = v.placeholder?v.placeholder:'';
                     r = r.replaceAll('{campo}',key);
                     r = r.replaceAll('{label}',v.label);
@@ -1198,31 +1190,37 @@ function qFormCampos(config){
                     r = r.replaceAll('{event}',v.event);
                     r = r.replaceAll('{col}','md');
                     r = r.replaceAll('{class}',classe);
-                    r = r.replaceAll('{class_div}',class_div);
                     r = r.replaceAll('{op}',op);
                     r = r.replaceAll('{placeholder}',placeholder);
                 }else{
                     try {
 
-                        var type = v.type;
-                        var checked = '';
-                        if(type == 'chave_checkbox' || type == 'checkbox'){
-                                console.log(v);
+                        var checked = '',type = v.type,value_text=v.value_text?v.value_text:v.value,label = tl.replaceAll('{campo}',key);
+                        label.replaceAll('{label}',);
+
+                        if(type == 'moeda'){
+                            v.type = 'tel';
+                            v.class += ' moeda';
+                        }else if(type == 'hidden_text'){
+                            v.type = 'hidden';
+                            v.event = '';
+                        }else if(type == 'chave_checkbox'){
                             if(v.valor_padrao==v.value){
                                 checked = 'checked';
                             }
                         }
                         r += tema[type].replaceAll('{type}',v.type);
-                        var label = tl.replaceAll('{campo}',key);
-                        label.replaceAll('{label}',);
                         var value = v.value?v.value:'';
                         var classe = v.class?v.class:'';
+                        var class_div = v.class_div?v.class_div:'';
                         var placeholder = v.placeholder?v.placeholder:'';
                         r = r.replaceAll('{campo}',key);
                         r = r.replaceAll('{label}',v.label);
                         r = r.replaceAll('{value}',value);
+                        r = r.replaceAll('{value_text}',value_text);
                         r = r.replaceAll('{tam}',v.tam);
                         r = r.replaceAll('{event}',v.event);
+                        r = r.replaceAll('{class_div}',class_div);
                         r = r.replaceAll('{col}','md');
                         r = r.replaceAll('{class}',classe);
                         r = r.replaceAll('{checked}',checked);
@@ -1274,118 +1272,51 @@ function dps_salvarEpatas(res,etapa,m){
     //if(typeof m!='undefined')
     $(m).modal('hide');
 }
-function dps_salvarSituacao(res,etapa,m){
-    $.each(res,function(v,k) {
-        var sl = '#tr_'+v+' .tags';
-        $(sl).html(etapa);
-    });
-    //if(typeof m!='undefined')
-    $(m).modal('hide');
+function janelaEtapaMass(selecionandos){
+    if(typeof selecionandos =='undefined'){
+        return ;
+    }
+    if(selecionandos==''){
+        var msg = '<div class="row"><div id="exibe_etapas" class="col-md-12 text-center"><p>Por favor selecione um registro!</p></div></div>';
+        alerta(msg,'modal-etapa','Alerta','',true,3000,true)
+        return;
+    }else{
+       var msg = '<form id="frm-etapas" action="/familias/ajax"><div class="row"><div id="exibe_etapas" class="col-md-12">seleEta</div></div></form>',btnsub = '<button type="button" id="submit-frm-etapas" class="btn btn-primary">Salvar</button>',m='modal-etapa';
+
+       alerta(msg,m,'Editar Etapas');
+       $.ajax({
+            type:"GET",
+            url:"/familias/campos",
+            dataType:'json',
+            success: function(res){
+                res.etapa.type = 'select';
+                res.etapa.tam = '12';
+                res.etapa.option_select = true;
+                var conp = {etapa:res.etapa};
+                var et = qFormCampos(conp);
+                et += '<input type="hidden" name="opc" value="salvar_etapa_massa"/>';
+                et += '<input type="hidden" name="ids" value="'+selecionandos+'"/>';
+                $('#exibe_etapas').html(et);
+                $(btnsub).insertAfter('#'+m+' .modal-footer button');
+                $('[mask-cpf]').inputmask('999.999.999-99');
+                $('[mask-data]').inputmask('99/99/9999');
+                $('[mask-cep]').inputmask('99.999-999');
+                carregaMascaraMoeda(".moeda");
+                $('#submit-frm-etapas').on('click',function(e){
+                    e.preventDefault();
+                    submitFormularioCSRF($('#frm-etapas'),function(res){
+                        if(res.mens){
+                            lib_formatMensagem('.mens',res.mens,res.color);
+                        }
+                        if(res.exec && (a = res.atualiza)){
+                            dps_salvarEpatas(a,res.etapa,'#'+m);
+                        }
+                    });
+                });
+            }
+       });
+    }
 }
-// function janelaEtapaMass(selecionandos){
-//     if(typeof selecionandos =='undefined'){
-//         return ;
-//     }
-//     if(selecionandos==''){
-//         var msg = '<div class="row"><div id="exibe_etapas" class="col-md-12 text-center"><p>Por favor selecione um registro!</p></div></div>';
-//         alerta(msg,'modal-etapa','Alerta','',true,3000,true)
-//         return;
-//     }else{
-//        var msg = '<form id="frm-etapas" action="/familias/ajax"><div class="row"><div id="exibe_etapas" class="col-md-12">seleEta</div></div></form>',btnsub = '<button type="button" id="submit-frm-etapas" class="btn btn-primary">Salvar</button>',m='modal-etapa';
-
-//        alerta(msg,m,'Editar Etapas');
-//        $.ajax({
-//             type:"GET",
-//             url:"/familias/campos",
-//             dataType:'json',
-//             success: function(res){
-//                 res.etapa.type = 'select';
-//                 res.etapa.tam = '12';
-//                 res.etapa.option_select = true;
-//                 var conp = {etapa:res.etapa};
-//                 var et = qFormCampos(conp);
-//                 et += '<input type="hidden" name="opc" value="salvar_etapa_massa"/>';
-//                 et += '<input type="hidden" name="ids" value="'+selecionandos+'"/>';
-//                 $('#exibe_etapas').html(et);
-//                 $(btnsub).insertAfter('#'+m+' .modal-footer button');
-//                 $('[mask-cpf]').inputmask('999.999.999-99');
-//                 $('[mask-data]').inputmask('99/99/9999');
-//                 $('[mask-cep]').inputmask('99.999-999');
-//                 carregaMascaraMoeda(".moeda");
-//                 $('#submit-frm-etapas').on('click',function(e){
-//                     e.preventDefault();
-//                     submitFormularioCSRF($('#frm-etapas'),function(res){
-//                         if(res.mens){
-//                             lib_formatMensagem('.mens',res.mens,res.color);
-//                         }
-//                         if(res.exec && (a = res.atualiza)){
-//                             dps_salvarEpatas(a,res.etapa,'#'+m);
-//                         }
-//                     });
-//                 });
-//             }
-//        });
-//     }
-// }
-// function janelaSituacaoMass(selecionandos){
-//     if(typeof selecionandos =='undefined'){
-//         return ;
-//     }
-//     if(selecionandos==''){
-//         var msg = '<div class="row"><div id="exibe_situacaos" class="col-md-12 text-center"><p>Por favor selecione um registro!</p></div></div>';
-//         alerta(msg,'modal-situacao','Alerta','',true,3000,true)
-//         return;
-//     }else{
-//        var msg = '<form id="frm-situacaos" action="/familias/ajax"><div class="row"><div id="exibe_situacaos" class="col-md-12"></div></div></form>',btnsub = '<button type="button" id="submit-frm-situacaos" class="btn btn-primary">Salvar</button>',m='modal-situacao';
-
-//        alerta(msg,m,'Editar situação');
-//        $.ajax({
-//             type:"GET",
-//             url:"/familias/campos",
-//             dataType:'json',
-//             success: function(res){
-//                 var tags = res['tags[]'];
-//                 var categoria_pendencia = res['config[categoria_pendencia]'];
-//                 var categoria_processo = res['config[categoria_processo]'];
-//                 tags.type = 'select';
-//                 tags.tam = '12';
-//                 tags.option_select = true;
-//                 var conp = {tags:tags,categoria_pendencia:categoria_pendencia,categoria_processo:categoria_processo};
-//                 var et = qFormCampos(conp);
-//                 et += '<input type="hidden" name="opc" value="salvar_situacao_massa"/>';
-//                 et += '<input type="hidden" name="ids" value="'+selecionandos+'"/>';
-//                 $('#exibe_situacaos').html(et);
-//                 $(btnsub).insertAfter('#'+m+' .modal-footer button');
-//                 $('[mask-cpf]').inputmask('999.999.999-99');
-//                 $('[mask-data]').inputmask('99/99/9999');
-//                 $('[mask-cep]').inputmask('99.999-999');
-//                 carregaMascaraMoeda(".moeda");
-//                 let cp = $('[div-id="config[categoria_pendencia]"],[div-id="categoria_pendencia"]');
-//                 let cp_sel = $('[name="config[categoria_pendencia]"],[name="categoria_pendencia"]');
-
-//                 let cpr = $('[div-id="config[categoria_processo]"],[div-id="categoria_processo"]');
-//                 let cpr_sel = $('[name="config[categoria_processo]"],[name="categoria_processo"]');
-//                 //alert(v);
-//                 cpr.hide();
-//                 cpr_sel.removeAttr('required',true).attr('hidden');
-//                 cp.hide();
-//                 cp_sel.removeAttr('required').attr('hidden',true);
-
-//                 $('#submit-frm-situacaos').on('click',function(e){
-//                     e.preventDefault();
-//                     submitFormularioCSRF($('#frm-situacaos'),function(res){
-//                         if(res.mens){
-//                             lib_formatMensagem('.mens',res.mens,res.color);
-//                         }
-//                         if(res.exec && (a = res.atualiza)){
-//                             dps_salvarSituacao(a,res.situacao,'#'+m);
-//                         }
-//                     });
-//                 });
-//             }
-//        });
-//     }
-// }
 function carregaMascaraMoeda(s){
     $(s).maskMoney({
         prefix: 'R$ ',
@@ -1438,6 +1369,8 @@ function lib_htmlVinculo(ac,campos,lin){
         }
     }
     if(ac=='alt'){
+
+
         if(Object.entries(arr).length>0){
             Object.entries(arr).forEach(([k, v]) => {
                 if(tipo=='array'){
@@ -1479,7 +1412,6 @@ function lib_htmlVinculo(ac,campos,lin){
                     }
                 }
             });
-
             renderForm(c,campos,function(res){
                 if(res.mens){
                     lib_formatMensagem('.mens',res.mens,res.color);
@@ -1663,7 +1595,7 @@ function calculaLinCad(seleTr){
 }
 function lib_listDadosHtmlVinculo(res,campos,ac,lin){
     //lin é o numero da linha para o caso do tipo array
-    //alert(lin);
+    // alert(campos);
     if(typeof ac=='undefined'){
         ac = 'alt';
     }
@@ -1680,15 +1612,18 @@ function lib_listDadosHtmlVinculo(res,campos,ac,lin){
     if(typeof tipo =='undefined'){
         var tipo='int';
     }
+
     if((d=res.dados) && ac =='cad'){
         var table = $('#table-html_vinculo-'+dt.campo);
         lin = calculaLinCad('#table-html_vinculo-'+dt.campo+' tbody tr');
-       // alert(lin);
         var tm = $('tm').html();
         var tm0 = '<tr id="tr-{id}">{td}</tr>';
         var tm = '<td id="td-{k}" class="{class}">{v}</td>';
         var data_list = encodeArray(d);
+        console.log(d);
+
         if(t = dt.table){
+            console.log(t);
             var td = '';
             $.each(t,function(k,v){
                 if(v.type=='text'){
@@ -1793,7 +1728,6 @@ function lib_listarCadastro(res,obj){
     }
 }
 function lib_abrirModalConsultaVinculo(campo,ac){
-
     var btnAbrir = $('#row-'+campo+' .btn-consulta-vinculo'),btnFechar = $('#row-'+campo+' .btn-voltar-vinculo'),ef='slow';
     if(ac=='abrir'){
         btnAbrir.hide(ef);
@@ -1811,7 +1745,7 @@ function lib_abrirModalConsultaVinculo(campo,ac){
     }
 }
 function lib_autocomplete(obs){
-    var urlAuto = obs.attr('data-url');
+    var urlAuto = obs.attr('_url');
     var data_selector = obs.data('selector'),d=decodeArray(data_selector);
     try {
         if(typeof d.janela != 'undefined'){
@@ -1841,28 +1775,20 @@ function lib_autocomplete(obs){
         },
     });
 }
-function carregaMatricula(val,local){
+function carregaDados(obj,alvo){
     if(typeof local=='undefined'){
         local='';
     }
-    if(val==''|| val=='cad'|| val=='ger' || !val)
-        return ;
-    if(local=='familias'){
-        carregaQuadras(val);
-        lib_abrirModalConsultaVinculo('loteamento','fechar');
+    if(typeof alvo=='undefined'){
+        alvo = function (val) {
+            console.log(val);
+        };
     }
-    getAjax({
-        url:'/bairros/'+val+'/edit?ajax=s',
-    },function(res){
-        $('#preload').fadeOut("fast");
-        if(m=res.value.matricula){
-            $('[name="matricula"]').val(m);
-            $('#txt-matricula').html(m);
-        }else{
-            $('[name="matricula"]').val('');
-            $('#txt-matricula').html('');
-        }
-    });
+    var dados = obj.options[obj.selectedIndex].getAttribute('dados');
+    if(dados){
+        arrd = decodeArray(dados);
+    }
+    alvo(arrd);
 }
 function carregaBairro(val){
     if(val==''|| val=='cad'|| val=='ger' || !val)
@@ -1890,12 +1816,6 @@ function carregaQuadras(val,selQuadra){
     if(typeof selQuadra=='undefined'){
         selQuadra='quadra';
     }
-    const url = new URL(window.location.href);
-    let pagina = url.pathname;
-    let pag=pagina.split('/');
-    if(pag.length==2){
-        selQuadra = 'filter['+selQuadra+']';
-    }
     if(val==''){
         $('[div-id="'+selQuadra+'"] option.opcs').each(function(){
             $(this).remove();
@@ -1903,7 +1823,7 @@ function carregaQuadras(val,selQuadra){
         return
     }
     getAjax({
-        url:'/quadras?ajax=s&filter[bairro]='+val+'&campo_order=nome&order=ASC',
+        url:'/quadras?ajax=s&filter[bairro]='+val+'&campo_order=id&order=ASC',
     },function(res){
         $('#preload').fadeOut("fast");
         var option_select = '<option value="{value}" class="opcs">{label}</option>';
@@ -1913,7 +1833,7 @@ function carregaQuadras(val,selQuadra){
         });
         if(d=res.dados.data){
             $.each(d,function(k,v){
-                console.log(v);
+                //console.log(v);
                 opc += option_select.replaceAll('{label}',v.nome);
                 opc = opc.replaceAll('{value}',v.id);
             });
@@ -1933,12 +1853,12 @@ function buscaCep1_0(cep_code){
        function(result){
            console.log(result);
           if( result.cep =='' ){
-             alerta(result.message || "Cep nÃ£o encontrado!");
+             alerta(result.message || "Cep não encontrado!");
              return;
           }
           if( result.erro){
               $('#Cep,#Cep,[q-inp="Cep"],[name="edit_cliente[Cep]"]').select();
-             lib_formatMensagem('.mens,.mensa',"O cep <b>"+cep_code+"</b> nÃ£o foi encontrado! <button type=\"button\" onclick='abrirjanelaPadraoConsulta(\"https://buscacepinter.correios.com.br/app/endereco/index.php?t\");' class='btn btn-primary'>"+__translate('NÃ£o sei o cep')+"</button>",'danger',9000);
+             lib_formatMensagem('.mens,.mensa',"O cep <b>"+cep_code+"</b> não foi encontrado! <button type=\"button\" onclick='abrirjanelaPadraoConsulta(\"https://buscacepinter.correios.com.br/app/endereco/index.php?t\");' class='btn btn-primary'>"+__translate('Não sei o cep')+"</button>",'danger',9000);
               $('input#Cep,[name="cep"],[q-inp="cep"],[name="edit_cliente[Cep]"]').val('');
              return;
           }
@@ -1953,12 +1873,6 @@ function buscaCep1_0(cep_code){
           $('#numero,#Numero,[q-inp="numero"],[name="numero"],[numero="cep"]').select();
        });
 }
-function Meses(val){
-    if(val !=''){
-        var mese = {01:"JANEIRO",02:"FEVEREIRO",03:"MARCO",04:"ABRIL",05:"MAIO",06:"JUNHO",07:"JULHO",08:"AGOSTO",09:"SETEMBRO",10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"};
-        return mese[val];
-    }
-}
 function popupCallback_vinculo(res){
     var obj = $('obj').html();
     var d = decodeArray(obj);
@@ -1969,41 +1883,6 @@ function popupCallback_vinculo(res){
     if(res.exec){
         lib_listDadosHtmlVinculo(res,obj,'cad');
     }
-}
-function precoBanco(preco){
-    var sp = preco.substr(preco,-3,1);
-    if(sp=='.'){
-        preco_venda1 = preco;
-    }else{
-        preco = preco.replace('R$','');
-        preco_venda1 = preco.replace(".", "");
-        preco_venda1 = preco_venda1.replace(",", ".");
-        preco_venda1 = new Number(preco_venda1);
-    }
-    return preco_venda1;
-}
-function number_format (number, decimals, dec_point, thousands_sep) {
-    // Strip all characters but numerical ones.
-    number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
-    var n = !isFinite(+number) ? 0 : +number,
-        prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-        sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-        dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-        s = '',
-        toFixedFix = function (n, prec) {
-            var k = Math.pow(10, prec);
-            return '' + Math.round(n * k) / k;
-        };
-    // Fix for IE parseFloat(0.55).toFixed(0) = 0;
-    s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-    if (s[0].length > 3) {
-        s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-    }
-    if ((s[1] || '').length < prec) {
-        s[1] = s[1] || '';
-        s[1] += new Array(prec - s[1].length + 1).join('0');
-    }
-    return s.join(dec);
 }
 function popupCallback_redirect(url){
     window.location=url;
@@ -2201,7 +2080,6 @@ function selectTipoUser(tipo){
         var lab_cpf = 'CPF *';
         url = url.replace('/pj','/'+tipo);
         $('[name="cpf"]').inputmask('999.999.999-99');
-        $('[div-id="email"]').removeClass('col-md-9').addClass('col-md-6');
     }
     if(tipo=='pj'){
         url = url.replace('/pf','/'+tipo);
@@ -2209,53 +2087,11 @@ function selectTipoUser(tipo){
         $('.div-pj').addClass('d-block').removeClass('d-none');
         var lab_nome = 'Nome do responsável *';
         var lab_cpf = 'CPF do responsável*';
-        $('[div-id="email"]').removeClass('col-md-6').addClass('col-md-9');
         //$('[name="cpf"]').inputmask('999.999.999/9999-99');
     }
     window.history.pushState("object", "Title", url);
-    $('[for="name"]').html(lab_nome);
+    $('[for="nome"]').html(lab_nome);
     $('[for="cpf"]').html(lab_cpf);
-}
-function exibeCategoria(obj){
-    var v=obj.value;
-    let cp = $('[div-id="config[categoria_pendencia]"],[div-id="categoria_pendencia"]');
-    let cp_sel = $('[name="config[categoria_pendencia]"],[name="categoria_pendencia"]');
-
-    let cpr = $('[div-id="config[categoria_processo]"],[div-id="categoria_processo"]');
-    let cpr_sel = $('[name="config[categoria_processo]"],[name="categoria_processo"]');
-    //alert(v);
-    cpr.hide();
-    cpr_sel.removeAttr('required',true).attr('hidden');
-    cp.hide();
-    cp_sel.removeAttr('required').attr('hidden',true);
-
-    if(v==3){
-        cp.show();
-        cp_sel.attr('required',true).removeAttr('hidden');
-    }else if(v==10){
-        cpr.show();
-        cpr_sel.attr('required',true).removeAttr('hidden');
-    }else{
-        cpr.hide();
-        cpr_sel.removeAttr('required',true).attr('hidden');
-        cp.hide();
-        cp_sel.removeAttr('required').attr('hidden',true);
-    }
-    console.log(v);
-}
-function fecharAlertaFatura(url){
-    getAjax({
-        url:url,
-    },function(res){
-        $('#preload').fadeOut("fast");
-        if(m=res.value.matricula){
-            $('[name="matricula"]').val(m);
-            $('#txt-matricula').html(m);
-        }else{
-            $('[name="matricula"]').val('');
-            $('#txt-matricula').html('');
-        }
-    });
 }
 function checkTodosAnos() {
     let urlAtual = lib_trataRemoveUrl('ano','');
@@ -2263,7 +2099,7 @@ function checkTodosAnos() {
     $('#preload').show();
 }
 function lib_autocompleteGeral(cl,funCall){
-    var urlAuto = $(cl).attr('data-url');
+    var urlAuto = $(cl).attr('url_');
     if(typeof funCall=='undefined'){
         $( cl ).autocomplete({
             source: urlAuto,
@@ -2280,744 +2116,180 @@ function lib_autocompleteGeral(cl,funCall){
         });
     }
 }
-/**areaprodutos */
-function divideHoras(obj){
-    console.log(obj);
-    if(n=obj.getAttribute('name')){
-        if(n=='config[valor_r]'){
-            var valor_r = obj.value;
-        }else{
-            var valor_r = document.querySelector('[name="config[valor_r]"]').value;
-        }
-        valor_r = precoBanco(valor_r);
-        if(n=='config[valor_r]'){
-            var qtd = document.querySelector('[name="config[total_horas]"]').value;
-        }else{
-            var qtd = obj.value;
-        }
-        if(qtd && valor_r) {
-            qtd = new Number(qtd);
-            var vho = valor_r/qtd;
-            if(vho >= 0) {
-                vho = number_format(vho,2,',','.');
-                document.querySelector('[name="config[valor_h]"]').value = vho;
-            }
-        }
-
-    }
-}
-function multiplicaHorasLance(obj){
-    var h_un=precoBanco(obj.value),qtd= document.querySelector('[name="config[total_horas]"]').value;
-    qtd = new Number(qtd);
-    var lt = h_un*qtd;
-    document.querySelector('[name="config[lance_total]"]').value=lt;
-}
-function dataContratos(obj) {
-    var data = obj.value,dpost=$('#frm-posts').serialize();
-    try {
-        if(data.length){
-            getAjax({
-                url:'/leiloes/get-data-contrato/'+data,
-                data:dpost,
-            },function(res){
-                $('#preload').fadeOut("fast");
-                if(!res.exec){
-                    documento.querySelector('[name="config[contrato]"]').value='';
-                    documento.querySelector('[name="config[contrato]"]').querySelector('option[value]=\'\'').selected='selected';
-                    // document.querySelector('.select2-selection__choice__remove').click();
-                    $('[name="config[total_horas]"]').val('');
-                    $('[name="config[valor_r]"]').val('');
-                    $('[name="post_content"]').val('');
-                    $('[name="config[valor_atual]"]').val('');
-                    return;
-                }
-                if(res.total_horas){
-                    let vl_th = res.total_horas;
-                    let incremento = res.incremento;
-                    $('[name="config[total_horas]"]').val(res.total_horas);
-                    $('[id="txt-config[total_horas]"]').html(vl_th);
-                    $('[id="txt-config[incremento]"]').html(incremento);
-                }else{
-                    $('[name="config[total_horas]"]').val(0);
-                    $('[id="txt-config[total_horas]"]').html('');
-                    $('[id="txt-config[incremento]"]').html('');
-                }
-                if(res.valor_r){
-                    let vl_r = number_format(res.valor_r,'2',',','.');
-                    $('[name="config[valor_r]"]').val(vl_r);
-                    $('[id="txt-config[valor_r]"]').html(vl_r);
-                    $('[id="txt-config[valor_venda]"]').html(res.config.valor_venda);
-                    // $('[name="config[valor_r]"]').maskMoney({symbol:'R$ ', thousands:'.', decimal:',', symbolStay: true});
-                }else{
-                    $('[name="config[valor_r]"]').val(0);
-                    $('[id="txt-config[valor_r]"]').html('');
-                    $('[id="txt-config[valor_venda]"]').html('');
-                }
-                $('[name="post_content"]').val(res.description);
-                $('#txt-post_content').html(res.description);
-                $('[name="config[valor_atual]"]').val(res.valor_atual);
-                // console.log(res);
-                // if(m=res.value.matricula){
-                //     $('[name="matricula"]').val(m);
-                //     $('#txt-matricula').html(m);
-                // }else{
-                //     $('[name="matricula"]').val('');
-                //     $('#txt-matricula').html('');
-                // }
-            });
-        }
-    } catch (error) {
-        alert('erro')
-        console.log(error);
-    }
-}
-function lib_gerLances(redirect){
-    var idForm = '#frm-lance';
-    var btn_sub = '#frm-lance';
-    $(btn_sub).on('click',function(e){
-        e.preventDefault();
-        var valor_l = $('#frm-lance [name="valor_lance"]').val();
-        valor_l = number_format(valor_l,2,',','.');
-        // if(!window.confirm('DESEJA MESMO CONFIRMAR O LANCE DE R$ '+valor_l+'? \n Ao fazer isso você está concordando também com os nossos termos de usos')){
-        //     return ;
-        // }
-        var msg = '<div class="row"><div id="exibe_etapas" class="col-md-12 text-center"><h6>DESEJA MESMO CONFIRMAR O LANCE DE R$ '+valor_l+'?</h6><p>\n Ao fazer isso você estara concordando também com os nossos <a href="/termos-do-site" target="_BLANK" class="text-decoration-underline">termos de uso</a></p></div><div class="col-md-12 mt-3 text-center"></div></div>';
-        // var btns = '<button type="button" class="btn btn-primary" salvar-agora>Salvar agora</button>';
-        // alerta2(msg,'modal-lance','Atenção','',true,9000,true);
-        $('#modal-dar-lance .modal-body').html(msg);
-        var btnse = $('[seguir-lance]');
-        btnse.attr('onclick','seguirLance();');
-        btnse.on('click',function(){
-            // seguirLance();
-            document.querySelector('[data-bs-dismiss="modal"]').click();
-        });
-        return;
-
-    });
-}
-function seguirLance(){
-    var idForm = '#frm-lance';
-    submitFormulario($(idForm),function(res){
-        try {
-            if(res.mens){
-                $('.mens').html(res.mens);
-            }
-            if(res.exec && res.redirect){
-                window.location=res.redirect;
-            }
-            if(res.code_mens=='enc'){
-                if(res.redirect=='self'){
-                    var red = urlAtual();
-                    window.location=red;
-                    console.log(red);
-                }
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    },function(error){
-        log(error);
-    });
-}
-function excluirReserva(token){
-    if(!window.confirm('DESEJA MESMO REMOVER A RESERVA?')){
-        return;
+function update_status_post(obj){
+    let id = obj.getAttribute('data-id');
+    let status = obj.checked;
+    let tab = obj.getAttribute('data-tab');
+    let campo = obj.getAttribute('data-campo');
+    if(typeof campo =='undefined'){
+        campo = 'post_status';
     }
     getAjax({
-        url:'/ajax/excluir-reserva-lance',
+        url:'/admin/ajax/chage_status',
         type: 'POST',
         dataType: 'json',
         csrf: true,
         data:{
-            token: token,
+            id: id,
+            status: status,
+            tab: tab,
+            campo: campo,
         }
     },function(res){
         $('#preload').fadeOut("fast");
-        $('.mes').html(res.mens);
-        if(res.exec){
-            $('#info-reserva').remove();
-        }
+        lib_formatMensagem('.mens',res.mens,res.color);
+
     },function(err){
         $('#preload').fadeOut("fast");
         console.log(err);
     });
 }
-function remove_contrato_leilao(){
-    $('[name="config[contrato]"]').val('');
-    $('#tk-contrato,#btn-remove-contrato').remove();
-}
-function validaNomeCompleto(seletor){
-	var no=document.querySelector(seletor),nome=no.value,arr_no=nome.split(' '),ret=false;
-	// console.log(arr_no[1]);
-	try {
-		var merror='<label id="nome-error" class="error" for="nome">Nome completo invÃ¡lido.</label>';
-		if(typeof arr_no[1]!='undefined'){
-			var sn=arr_no[1];
-			if(sn==''){
-				no.classList.add("error");
-				no.classList.remove("valid");
-				$('#nome-error').remove();
-				$(merror).insertAfter(seletor);
-				no.select();
-			}else{
-				ret=true
-				no.classList.add("valid");
-				no.classList.remove("error");
-				$('#nome-error').remove();
-			}
-		}else{
-			no.classList.add("error");
-			no.classList.remove("valid");
-			$('#nome-error').remove();
-			$(merror).insertAfter(seletor);
-			no.select();
-		}
-		return ret;
-	} catch (error) {
-		no.classList.add("error");
-		no.classList.remove("valid");
-		$('#nome-error').remove();
-		$(merror).insertAfter(seletor);
-		no.select();
-		console.log(error);
-		return ret;
-	}
-}
-function validaCFP(seletor){
-	var cp=document.querySelector(seletor),v=cp.value,ret=true;
-	var Soma;
-    var Resto;
-	v = v.replace('.', '');
-    v = v.replace('.', '');
-    strCPF = v.replace('-', '');
-    Soma = 0;
+function resend_email_sic() {
+    getAjax({
+        url:'/internautas/send-verific-user',
+        type: 'GET',
+        dataType: 'json',
+        csrf: true
+    },function(res){
+        $('#preload').fadeOut("fast");
 
-	if (strCPF == "00000000000") ret= false;
+        lib_formatMensagem('.mens',res.mens,res.color,9000);
 
-	for (i=1; i<=9; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (11 - i);
-	Resto = (Soma * 10) % 11;
-
-		if ((Resto == 10) || (Resto == 11))  Resto = 0;
-		if (Resto != parseInt(strCPF.substring(9, 10)) ) ret= false;
-
-	Soma = 0;
-	for (i = 1; i <= 10; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (12 - i);
-		Resto = (Soma * 10) % 11;
-
-	if ((Resto == 10) || (Resto == 11))  Resto = 0;
-	if (Resto != parseInt(strCPF.substring(10, 11) ) ) ret= false;
-	if(!ret){
-		var merror='<label id="cpf-error" class="error" for="cpf">CPF invÃ¡lido.</label>';
-		$('#cpf-error').remove();
-		$(merror).insertAfter(seletor);
-		cp.classList.add("error");
-		cp.classList.remove("valid");
-		cp.select();
-	}else{
-		cp.classList.add("valid");
-		cp.classList.remove("error");
-		$('#cpf-error').remove();
-	}
-	return ret;
-}
-function ecomerce_initPayment(){
-	var btn_submit = '<button type="button" class="btn btn-success btn-block col-12" f-sub="eco_submitCompra">Pagar</button>';
-	$('.div-bt-submit').html(btn_submit);
-	$('.met-pay input[type="radio"]').on('click', function(){
-		let val = $(this).val();
-		$('.c-pag').hide();
-		var sel = '#c-'+val;
-		$(sel).show();
-		var c_cred_card = document.getElementById('c-cred_card').querySelectorAll('.c-cred_card'),c_cred_card1 = document.getElementById('c-cred_card').querySelectorAll('select');
-		var c_pix = document.getElementById('c-pix').querySelectorAll('input'),c_pix1 = document.getElementById('c-pix').querySelectorAll('select');
-        try {
-            if(val=='pix'){
-                // console.log(c_cred_card);
-                c_cred_card.forEach(el => {
-                    el.setAttribute('disabled','disabled');
-                });
-                $('[f-sub="eco_submitCompra"]').show();
-                // document.querySelector('.total-boleto').disabled=true;
-                document.querySelector('.total-pix').disabled=false;
-                $('.met-pay label').removeClass('active');
-                $('#lb-pix').addClass('active');
-            }else if(val == 'boleto'){
-                c_cred_card.forEach(el => {
-                    el.setAttribute('disabled','disabled');
-                });
-                $('[f-sub="eco_submitCompra"]').show();
-                document.querySelector('.total-boleto').disabled=false;
-                document.querySelector('.total-pix').disabled=true;
-                $('.met-pay label').removeClass('active');
-                $('#lb-boleto').addClass('active');
-            }else if(val == 'cred_card'){
-                c_cred_card.forEach(el => {
-                    el.removeAttribute('disabled');
-                });
-                $('[f-sub="eco_submitCompra"]').show();
-                $('.met-pay label').removeClass('active');
-                $('#lb-card').addClass('active');
-            }else if(val =='conta'){
-                $('[f-sub="eco_submitCompra"]').hide();
-            }
-        } catch (e) {
-            console.log(e);
-        }
-	});
-	$('[f-sub="eco_submitCompra"]').on('click', function(){
-		eco_submitCompra();
-	});
-	jQuery('[name="cliente[Cpf]"]').inputmask('999.999.999-99');
-	$('[name="cartao[numero_cartao]"]').inputmask('9999 9999 9999 9999');
-	$('[name="cartao[codigo_seguranca]"]').inputmask('999');
-	$('[name="cliente[Nome]"]').on('change',function(){
-		validaNomeCompleto('[name="cliente[Nome]"]');
-	});
-	$('#cpf').on('change',function(){
-		validaCFP('#cpf');
-	});
-	$('[ck-pix]').on('click',function(e){
-		e.preventDefault();
-		document.getElementById('lb-pix').click();
-        $('.met-pay label').removeClass('active');
-        $('#lb-pix').addClass('active');
-	});
-
-}
-function eco_validateFormV2(seletor){
-	var ret = true;
-	$(seletor).find('input[required]').each(function(k){
-		var v = $(this).val(),attrId=$(this).attr('id');
-		if(attrId=='cliente[Nome]'){
-			if(!validaNomeCompleto('[name="cliente[Nome]"]')){
-				ret = false ;
-			}
-		}
-		if(attrId=='cpf'){
-			if(!validaCFP('#cpf')){
-				ret = false;
-			}
-		}
-	});
-	return ret;
-}
-function eco_submitCompra(){
-	let frm_pagamento='#frm-pag-v2';
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': jQuery('meta[name="csrf-token"]').attr('content')
-        }
+    },function(err){
+        $('#preload').fadeOut("fast");
+        console.log(err);
     });
-	$(frm_pagamento).validate({
-		submitHandler: function(form) {
-			if(!eco_validateFormV2(frm_pagamento)){
-				return;
-			}
-			getAjax({
-				url:'/payment',
-				type:'POST',
-				data:$(frm_pagamento).serialize(),
-			},function(response){
-				$('#preload').fadeOut("fast");
-				try {
-					if(response.mens){
-						$('.mens2').html(response.mens);
-					}
-					if(response.exec == true){
-						$('#preload').fadeIn();
-						// $('#frm-pag-v2').hide();
-						window.location = '/obrigado-pela-compra/'+response.token;
-					}else{
-						if(response.criarCobrancaCartao.asaas.errors[0]){
-							alert(response.criarCobrancaCartao.asaas.errors[0].description);
-                            return;
-						}else if(response.lancarFaturaPagamentoAsaas.exec){
-							window.location = '/obrigado-pela-compra?token='+btoa(response.lancarFaturaPagamentoAsaas.dadosCompraFinalizada.id);
-							//alert('redireciona para pagina de agradecimeno')
-						}else{
-							window.location = '/obrigado-pela-compra/'+response.token;
-						}
-					}
-				} catch (error) {
-					console.log(error);
-				}
-			});
-		},
-		ignore: ".ignore",
-		rules: {
-			nome: {
-				required: true
-			},
-			cpf:{
-				cpf: true
-			}
-		},
-		messages: {
-			nome: {
-				required: " Por favor preencher este campo"
-			},
-			cpf: {
-				required: " Por favor preencher um cpf vÃ¡lido"
-			}
-		}
-	});
-	$(frm_pagamento).submit();
-	// $('#'+id_form).submit(function(){
-
-	// });
 }
-function select_contrato(obj){
-    let id_resp = obj.value;
-    if(id_resp){
-        try {
-            let url = lib_trataAddUrl('post_author',id_resp);
-            //preloader
-            window.location = url;
-            // getAjax({
-            //     url:'/leiloes/list-contratos/'+id_resp,
-            //     // data:dpost,
-            // },function(res){
-            //     $('#preload').fadeOut("fast");
-            //     if(res.campo){
-            //         var et = qFormCampos(res.compo);
-            //         if(et.length){
-            //             $('[div-id="config[contrato]"]').remove();
-            //             $(et).insertAfter('[div-id="config[status]"]');
-            //         }
-            //         console.log(et);
-            //     }
-
-            // });
-        } catch (error) {
-            alert('erro')
-            console.log(error);
-        }
+function exibeTpc(val){
+    if(val=='p'){
+        $('.tpc-p').show();
+        $('.tpc-a').hide();
+    }
+    if(val=='a'){
+        $('.tpc-p').hide();
+        $('.tpc-a').show();
     }
 }
-function verific_cvalor_venda(valor){
-    if(typeof valor == 'undefined'){
-        var valor = document.querySelector('[id="inp-config[valor_venda]"]').value;
+function cancelarSulamerica(token,id,obj){
+    var no = obj.getAttribute('data-operacao');
+    // var token_contrato = obj.getAttribute('data-token_contrato');
+    if(!window.confirm('DESEJA PROSSEGUIR COM O CANCELAMENTO?')){
+        return;
     }
-    var vr = document.querySelector('[id="inp-config[valor_r]"]').value;
-    if(vr){
-        var valor = precoBanco(valor);
-        var pvr = precoBanco(vr);
-        // console.log('valor: '+valor+' vr: ' + vr);
-        if(valor<pvr){
-            alert('O valor de COMPRE JÁ ['+valor+'], não pode ser menor que o valor da RESCISÂO ['+pvr+']');
-            document.querySelector('[id="inp-config[valor_venda]"]').value='';
-            document.querySelector('[id="inp-config[valor_venda]"]').focus();
-            return false;
-        }
-    }
-    return true;
-}
-function seguir_leilao(leilao_id,user_id,ac){
-    if(leilao_id && user_id){
+    try {
         getAjax({
-            url:'/ajax/ger-seguidores',
-            type: 'POST',
-            dataType: 'json',
-            csrf: true,
-            data:{
-                leilao_id: leilao_id,
-                user_id: user_id,
-                ac: ac,
-            }
-        },function(res){
-            $('#preload').fadeOut("fast");
-            $('.mens').html(res.mens);
-            if(res.exec){
-                window.location.reload();
-            }
-            if(res.code_mens=='enc'){
-                window.location.reload();
-            }
-        },function(err){
-            $('#preload').fadeOut("fast");
-            console.log(err);
-        });
-    }
-}
-function alerta_modal_login_seguir(id){
-    var msg='<div class="row"><div class="col-12 text-center">É necessário estar logado para executar essa operação</div><div class="col-12 mt-3 text-center"><a class="btn btn-primary  w-100" href="/login?r='+urlAtual()+'?like=s">Entrar</a></div></div>';
-    alerta5(msg,'modal-login','Login necessário','','','','');
-
-}
-function markAsRead(id){
-    if(id){
-        getAjax({
-            url:'/ajax/notification',
+            url:'/api/v1/cancelar',
             type: 'POST',
             dataType: 'json',
             csrf: true,
             data:{
                 id: id,
-                ac: 'markAsRead',
+                numeroOperacao: no,
+                token_contrato: token
             }
         },function(res){
             $('#preload').fadeOut("fast");
-            try {
-                if(res.exec){
-                    $('#tr-'+id).remove();
-                    $('#total-notifications').html(res.total);
-                }
-                $('.mes').html(res.mens);
-            } catch (error) {
-                console.log(error);
-            }
+            lib_formatMensagem('.mens',res.mens,res.color);
+            dps_cancela(res);
         },function(err){
             $('#preload').fadeOut("fast");
             console.log(err);
         });
-    }
-}
-function close_popup(){
-    sessionStorage.setItem("close_popup", "s");
-}
-function modalConfirm(mes,callB){
-    if(window.confirm(mes)){
-        callB;
-    }
-}
-function reciclar(lid){
-    var m='Ao reciclar este leilão todos os lances serão apagados <br> DESEJA CONTINUAR?';
-    alerta(m,'m-reciclar','Atenção');
-    var btn_prosseguir = '<button type="button" ac-reciclar class="btn btn-primary">Prosseguir <i class="fa fa-chevron-right"></i></button>';
-    $(btn_prosseguir).insertAfter('#m-reciclar .modal-footer button');
-    $('[ac-reciclar]').on('click', function(){
-        getAjax({
-            url:'/ajax/reciclar-leilao/'+lid,
-            type:'POST',
-            dataType: 'json',
-            csrf: true,
-        },function(res){
-            $('#preload').fadeOut("fast");
-            if(res.exec){
-                var url = '/admin/leiloes_adm/'+lid+'/edit?redirect='+domain+'/admin';
-                $('#preload').fadeIn();
-                window.location = url;
-            }
-        })
-    });
-}
-function tornar_vencedor(lance_id){
-    var m='<div class="text-justfy w-100">Ao marcar esse como vencedor, nesse caso a preferência de pagamento será deste cliente.<b>Caso ele não pague no periodo de 2 dias uteis ele será banido da plataforma</b></div> <div class="w-100 mt-3"> DESEJA CONTINUAR?</div><div class="w-100"><label for="notify"><input type="checkbox" name="notify" id="notify" checked /> Notificar o cliente que é ganhador</label></div>';
-    alerta(m,'m-tornar-vencedor','Atenção');
-    var btn_prosseguir = '<button type="button" ac-tornar-vencedor class="btn btn-primary">Prosseguir <i class="fa fa-chevron-right"></i></button>';
-    $(btn_prosseguir).insertAfter('#m-tornar-vencedor .modal-footer button');
-    $('[ac-tornar-vencedor]').on('click', function(){
-        t_vencedor(lance_id);
-    });
-}
-function t_vencedor(lance_id){
-    getAjax({
-        url:'/ajax/tornar-vencedor',
-        type:'POST',
-        dataType: 'json',
-        data:{
-            lance_id:lance_id,
-            notify:$('#notify').is(':checked'),
-        },
-        csrf: true,
-    },function(res){
-        $('#preload').fadeOut("fast");
-        try {
-            $('.mens').html(res.mens);
-            $('#m-tornar-vencedor').modal('hide');
-        } catch (error) {
-            console.log(error);
-        }
-    })
-}
-function contatar_ganhador(obj){
-    try {
-        var url = obj.getAttribute('href');
-        // console.log(url);
-        if(url=='#'){
-            var dta = obj.getAttribute('dta');
-            if(dta=decodeArray(dta)){
-                if(dta.config.ddi && dta.config.telefonezap){
-                    var ddi=dta.config.ddi,nf=dta.config.telefonezap;
-                    nf = ddi+nf.replaceAll('(','');
-                    nf = nf.replaceAll(')','');
-                    nf = nf.replaceAll('-','');
-                    var valor=obj.getAttribute('data-valor'),nome_leilao=obj.getAttribute('data-nome_leilao');
-                    var texarea = 'Olá *'+dta.name+'* você esta recebendo o direito de compra do leilão abaixo: %0A ------ %0A *'+nome_leilao+'* %0A Valor: *R$'+number_format(valor,2,',','.')+'*';
-
-                    var msg = '<div class="col-12"><label>Nome:</label> '+dta.name+'</div>'+
-                    '<div class="col-12"><label>CPF:</label> '+dta.cpf+'</div>'+
-                    '<div class="col-12"><label>Telefone Zap:</label> '+nf+'</div>'+
-                    '<div class="col-12"><label>Mensagem:</label><textarea class="form-control" id="zap_mess">'+texarea+'</textarea></div>';
-                    alerta(msg,'m-cad-mensagem','Mensagem Whatsapp');
-                    var btn_prosseguir = '<button type="button" envia-zap class="btn btn-primary">Enviar <i class="fa fa-chevron-right"></i></button>';
-
-                    $(btn_prosseguir).insertAfter('#m-cad-mensagem .modal-footer button');
-                    $('[envia-zap]').on('click',function(e){
-                        var msg_zap = $('#zap_mess').val();
-                        var linkzap = 'https://wa.me/'+nf+'?text='+msg_zap;
-                        window.open(linkzap,'_black');
-                    });
-                }
-            }
-        }else{
-            alerta('Este cliente não tem contato de celular ou whatapp associado ou seu candastro <br>DESEJA CADASTRAR CELULAR AGORA?','m-cad-cliente','Alerta');
-            var btn_prosseguir = '<a href="'+url+'" class="btn btn-primary">Cadastrar <i class="fa fa-chevron-right"></i></a>';
-            $(btn_prosseguir).insertAfter('#m-cad-cliente .modal-footer button');
-            // window.location=url;
-        }
     } catch (error) {
         console.log(error);
     }
-}
-function primeira_etapa_cadastro_site(btn){
-    if(btn=='empresa'){
-        var msg = '<form id="pre-cadastro-escola" action="/ajax/pre-cadastro-escola"><div class="row"><div class="col mens"></div><div class="col-12"><label>Email</label><input type="email" required name="email" value="" class="form-control" placeholder="seu@email.com"  /></div><div class="col-12">Informe o CNPJ da sua instituição, credenciado na ANAC</div><div class="col-12"><input type="tel" required name="cnpj" value="" class="form-control" placeholder="CNPJ"  /></div></div></form>',btn_acao='<button type="button" onclick="submit_precadastro_site(\'pre-cadastro-escola\');" class="btn btn-primary">Avançar <i class="fa fa-arrow-right"></i></button>';
-        alerta5(msg,'modal-cad-empresa','Cadastro de escola',true);
-        $(btn_acao).insertAfter('#modal-cad-empresa .modal-footer button');
-        $('[name="cnpj"]').inputmask('99.999.999/9999-99');
-    }
-}
-function submit_precadastro_site(sel){
-    submitFormularioCSRF($('#'+sel),function(res){
-        try {
-            if(res.mens){
-                $('.mens').html(res.mens);
-            }
-            if(res.exec && res.redirect){
-                window.location=res.redirect;
-            }
-            if(res.code_mens=='enc'){
-                if(res.redirect=='self'){
-                    var red = urlAtual();
-                    window.location=red;
-                    console.log(red);
-                }
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    },function(e){
-        lib_funError(e);
-        try {
-            if(e.cnpj[0]){
-                alert(e.cnpj[0]+'\nEm caso de dúvida entre em contato com o nosso suporte');
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    });
-}
-function render_tabela_rab(obj,consulta,ed){
-    try {
-        var tem1 = '<table class="table"><thead><tr><th colspan="2">Informações da Aeronave</th></tr></thead><tbody>{tbody}</tbody></table>',tem2='<tr><td>{key}</td><td>{value}</td></tr>',tr='';
-        if(typeof ed=='undefined'){
-            ed = function(consulta,tabela){
-                $('.retorno-pesquisa').html(tabela).removeClass('d-none');
-                $('.etp-1').hide();
-                $('.etp-2').show();
-                $('#config_consulta').val(consulta);
-                console.log(obj);
-            }
-        }
-        if(typeof obj == 'object'){
-            for (const [key, value] of Object.entries(obj)) {
-                tr += tem2.replace('{key}',key);
-                tr = tr.replace('{value}',value);
-                if(key=='Matrícula'){
-                    $('#config_matricula').val(value);
-                }
-                console.log(`${key}: ${value}`);
-            }
-            var tabela = tem1.replace('{tbody}',tr);
-            ed(consulta,tabela);
-        }
-    } catch (error) {
-        console.log(error);
 
+}
+//executado depos do cancelamento
+function dps_cancela(res){
+    if(res.exec){
+        document.querySelector('[btn-volter="true"]').click();
+        $('[btn="permanecer"]').hide();
+        $('[btn="sair"]').hide();
     }
 }
-function consultaRabAdmin(m){
-    if(typeof m == 'undefined'){
-        m = document.querySelector('[name="config[matricula]"]').value;
+function reativar_cadastro(token,link_a){
+    if (typeof link_a=='undefined') {
+        alert('Id não informado')
+        return
     }
-    // var m = obj.value;
-    getAjax({
-        url:'/ajax/get-aeronave/'+m,
-    },function(res){
-        $('#preload').fadeOut("fast");
-        if(res.consulta){
-            $('[name="config[consulta]"]').val(res.consulta);
-        }
-        if(res.exec){
-            if(res.data && res.consulta){
-                render_tabela_rab(res.data,res.consulta,function(consulta,tabela){
-                    $('.retorno-pesquisa').html(tabela);
-                });
-                // $('#form-agendamento').attr('action','/ajax/enviar-agendamento')
-                // submitEtp2();
-            }
-        }
-        // if(m=res.value.matricula){
-        //     $('[name="matricula"]').val(m);
-        //     $('#txt-matricula').html(m);
-        // }else{
-        //     $('[name="matricula"]').val('');
-        //     $('#txt-matricula').html('');
-        // }
-    });
-}
-function envia_zapSing(token){
-    if(!window.confirm('CONFIRMAR ENVIO PARA O CLIENTE?')){
+    if(!window.confirm('DESEJA INICIAR O PRECESSO DE REATIVAÇÃO?')){
         return;
     }
-    getAjax({
-        url:'/ajax/send-to-zapsing',
-        type: 'POST',
-        dataType: 'json',
-        csrf: true,
-        data:{
-            token: token,
-        }
-    },function(res){
-        $('#preload').fadeOut("fast");
-        // $('.mes').html(res.mens);
-        lib_formatMensagem('.mens',res.mens,res.color);
-
-        // if(res.exec){
-        //     $('#info-reserva').remove();
-        // }
-    },function(err){
-        $('#preload').fadeOut("fast");
-        console.log(err);
-    });
-}
-function copyTextToClipboard(text) {
-    var textArea = document.createElement("textarea");
-    textArea.style.position = 'fixed';
-    textArea.style.top = 0;
-    textArea.style.left = 0;
-    textArea.style.width = '2em';
-    textArea.style.height = '2em';
-    textArea.style.padding = 0;
-    textArea.style.border = 'none';
-    textArea.style.outline = 'none';
-    textArea.style.boxShadow = 'none';
-    textArea.style.background = 'transparent';
-    textArea.value = text;
-
-    document.body.appendChild(textArea);
-    textArea.select();
     try {
-      var successful = document.execCommand('copy');
-      var msg = successful ? 'successful' : 'unsuccessful';
-       lib_formatMensagem('.mens','Copiado <b>'+text+'</b> com sucesso para Área de transferência','success',4000);
-
-      console.log('Copying text command was ' + msg);
-    } catch (err) {
-       lib_formatMensagem('.mens','Erro ao copiar para Área de transferência','danger',4000);
-      console.log('Oops, não pode ser copiado');
-      //window.prompt("Copie para Área de transferÃªncia: Ctrl+C e tecle Enter", text);
+        getAjax({
+            url:'/admin/ajax/cliente/reativar/'+token,
+            type: 'POST',
+            dataType: 'json',
+            csrf: true,
+            data:{
+                token: token
+            }
+        },function(res){
+            $('#preload').fadeOut("fast");
+            lib_formatMensagem('.mens',res.mens,res.color);
+            dps_reativa(res,link_a);
+        },function(err){
+            $('#preload').fadeOut("fast");
+            console.log(err);
+        });
+    } catch (error) {
+        console.log(error);
     }
-    document.body.removeChild(textArea);
-  }
+}
+function dps_reativa(res,link){
+    if(res.exec){
+        if(link){
+            window.location = link+'&bc=false';
+            // alert(link);
+        }
+    }
+}
+function clica_consulta_cliente(){
+    document.querySelector('[data-widget="navbar-search"]').click();
+}
+function excluir_cliente(id,link_r){
+    if (typeof id=='undefined') {
+        alert('Id não informado')
+        return
+    }
+    if(!window.confirm('DESEJA EXCLUIR O CADASTRO?\n\nAo prosseguir com esta ação todas as informações serão excluídas permanentemente!!')){
+        return;
+    }
+    try {
+        getAjax({
+            url:'/admin/ajax/cliente/delete/'+id,
+            type: 'POST',
+            dataType: 'json',
+            csrf: true,
+            // data:{
+            //     token: token
+            // }
+        },function(res){
+            $('#preload').fadeOut("fast");
+            lib_formatMensagem('.mens',res.mens,res.color);
+            if(res.exec){
+                window.location = link_r;
+            }
+            // dps_reativa(res,link_a);
+        },function(err){
+            $('#preload').fadeOut("fast");
+            console.log(err);
+        });
+    } catch (error) {
+        console.log(error);
+    }
+}
+function calculaFim(inicio){
+    var arr_data = inicio.split('-');
+    if(a=arr_data[0]){
+        var ano = new Number(a)+1;
+        if(m=arr_data[1]){
+            if(d=arr_data[2]){
+                var as = ano.toString();
+                var n_data = ano+'-'+m+'-'+d;
+                document.querySelector('[name="config[fimVigencia]"]').value = n_data;
+            }
+        }
+    }
+}

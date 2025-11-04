@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\admin\EventController;
 use App\Http\Requests\StoreQuadraRequest;
 use Illuminate\Http\Request;
 use stdClass;
@@ -12,7 +11,6 @@ use App\Models\User;
 use App\Models\_upload;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 
 class QuadrasController extends Controller
 {
@@ -20,13 +18,11 @@ class QuadrasController extends Controller
     public $routa;
     public $label;
     public $view;
-    public $tab;
     public function __construct(User $user)
     {
         $this->middleware('auth');
         $this->user = $user;
         $this->routa = 'quadras';
-        $this->tab = 'quadras';
         $this->label = 'Quadra';
         $this->view = 'padrao';
     }
@@ -146,8 +142,6 @@ class QuadrasController extends Controller
         $queryQuadra = $this->queryQuadra($_GET);
         $queryQuadra['config']['exibe'] = 'html';
         $routa = $this->routa;
-        (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-
         $ret = [
             'dados'=>$queryQuadra['quadra'],
             'title'=>$title,
@@ -191,6 +185,12 @@ class QuadrasController extends Controller
     }
     public function store(StoreQuadraRequest $request)
     {
+        /*
+        $validatedData = $request->validate([
+            'nome' => ['required','string','unique:quadras'],
+        ]);*/
+
+        //$valida
         $dados = $request->all();
         $ajax = isset($dados['ajax'])?$dados['ajax']:'n';
         $dados['ativo'] = isset($dados['ativo'])?$dados['ativo']:'n';
@@ -204,8 +204,6 @@ class QuadrasController extends Controller
             'exec'=>true,
             'dados'=>$dados
         ];
-        //REGISTRAR EVENTOS
-        (new EventController)->listarEvent(['tab'=>$this->tab,'id'=>$salvar->id,'this'=>$this]);
 
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$salvar->id;
@@ -218,66 +216,7 @@ class QuadrasController extends Controller
 
     public function show($id)
     {
-        $dados = Quadra::findOrFail($id);
-        $this->authorize('ler', $this->routa);
-        if(!empty($dados)){
-            $title = __('Visualização de quadras');
-            $titulo = $title;
-            $dados['ac'] = 'alt';
-            if(isset($dados['config'])){
-                $dados['config'] = Qlib::lib_json_array($dados['config']);
-            }
-            $listFiles = false;
-            $campos = $this->campos();
-            if(isset($dados['token'])){
-                $listFiles = _upload::where('token_produto','=',$dados['token'])->get();
-            }
-            $config = [
-                'ac'=>'alt',
-                'frm_id'=>'frm-quadras',
-                'route'=>$this->routa,
-                'id'=>$id,
-                'class_card1'=>'col-md-8',
-                'class_card2'=>'col-md-4',
-            ];
-            if(!$dados['matricula'])
-                $config['display_matricula'] = 'd-none';
-            if(isset($dados['config']) && is_array($dados['config'])){
-                foreach ($dados['config'] as $key => $value) {
-                    if(is_array($value)){
-
-                    }else{
-                        $dados['config['.$key.']'] = $value;
-                    }
-                }
-            }
-            $subdomain = Qlib::get_subdominio();
-            if(Gate::allows('is_admin2', [$this->routa]) && $subdomain !='cmd'){
-                $config['eventos'] = (new EventController)->listEventsPost(['post_id'=>$id]);
-            }else{
-                $config['class_card1'] = 'col-md-12';
-                $config['class_card2'] = 'd-none';
-            }
-            $ret = [
-                'value'=>$dados,
-                'config'=>$config,
-                'title'=>$title,
-                'titulo'=>$titulo,
-                'listFiles'=>$listFiles,
-                'campos'=>$campos,
-                'routa'=>$this->routa,
-                // 'eventos'=>(new EventController)->listEventsPost(['post_id'=>$id]),
-                'exec'=>true,
-            ];
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-            return view($this->view.'.show',$ret);
-        }else{
-            $ret = [
-                'exec'=>false,
-            ];
-            return redirect()->route($this->routa.'.index',$ret);
-        }
+        //
     }
 
     public function edit($quadra,User $user)
@@ -396,10 +335,6 @@ class QuadrasController extends Controller
                 'color'=>'danger',
             ];
         }
-        if($atualizar){
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-        }
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$id;
             return response()->json($ret);
@@ -420,15 +355,10 @@ class QuadrasController extends Controller
             }else{
                 $ret = redirect()->route($this->view.'.index',['mens'=>'Registro não encontrado!','color'=>'danger']);
             }
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
             return $ret;
         }
 
         Quadra::where('id',$id)->delete();
-        //REGISTRAR EVENTOS
-        (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
-
         if($ajax=='s'){
             $ret = response()->json(['mens'=>__('Registro '.$id.' deletado com sucesso!'),'color'=>'success','return'=>route($this->routa.'.index')]);
         }else{

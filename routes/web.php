@@ -1,27 +1,20 @@
 <?php
 
-use App\Http\Controllers\admin\EventController;
-use App\Http\Controllers\admin\OrcamentoController;
-use App\Http\Controllers\admin\PdfController;
-use App\Http\Controllers\admin\QuickCadController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\BairroController;
-use App\Http\Controllers\ContatoController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\EtapaController;
+use App\Http\Controllers\EscolaridadeController;
 use App\Http\Controllers\EstadocivilController;
-use App\Http\Controllers\SulAmericaController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\LotesController;
 use App\Http\Controllers\RelatoriosController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\URL;
+use App\Http\Controllers\MapasController;
+use App\Http\Controllers\portal\sicController;
+use App\Http\Controllers\portalController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use App\Models\User;
-use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Http\Middleware\TenancyMiddleware;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -32,220 +25,250 @@ use Illuminate\Support\Str;
 | contains the "web" middleware group. Now create something great!
 |
 */
+// global $prefixo_admin,$prefixo_site;
+// routes/web.php, api.php or any other central route files you have
 
-
-Route::fallback(function () {
-    return view('erro404');
-});
-// if (env('APP_ENV') == 'production') {
-//     URL::forceSchema('https');
-// }
-
-
-
-
-Auth::routes();
-Auth::routes(['register' => false]);
-Route::get('/solicitar-autorizacao', [SulAmericaController::class, 'solicitarAutorizacao']);
-Route::get('/consultar-guia', [SulAmericaController::class, 'consultarGuia']);
-Route::prefix('admin')->group(function(){
-    Route::prefix('quick-cad')->group(function(){
-        Route::get('/leilao',[QuickCadController::class,'leilao'])->name('quick.add.leilao');
-    });
-    Route::prefix('users')->group(function(){
-        Route::get('/',[UserController::class,'index'])->name('users.index');
-
-        Route::get('/ajax',[UserController::class,'paginacaoAjax'])->name('users.ajax');
-        Route::get('/lista.ajax',function(){
-            return view('users.index_ajax');
+foreach (config('tenancy.central_domains') as $domain) {
+    Route::domain($domain)->group(function () {
+        Route::get('/', function () {
+            return 'This is your multi-tenant application. it is the centar route';
         });
+    });
+}
+// Route::middleware(['web', TenancyMiddleware::class])->group(function () {
+//     $prefixo_admin = config('app.prefixo_admin');
+//     $prefixo_site = config('app.prefixo_site');
+//     Auth::routes();
+//     Route::middleware(['tenant.auth'])->group(function () {
+//         global $prefixo_admin,$prefixo_site;
+//         $prefixo_admin = config('app.prefixo_admin');
+//         $prefixo_site = config('app.prefixo_site');
+//         Route::prefix($prefixo_admin)->group(function(){
+//             Route::resource('posts','\App\Http\Controllers\admin\PostsController',['parameters' => [
+//                 'posts' => 'id'
+//             ]]);
+//             Route::resource('api-wp','\App\Http\Controllers\wp\ApiWpController',['parameters' => [
+//                 'api-wp' => 'id'
+//             ]]);
+//             Route::resource('pages','\App\Http\Controllers\admin\PostsController',['parameters' => [
+//                 'pages' => 'id'
+//             ]]);
+//             Route::resource('documentos','\App\Http\Controllers\DocumentosController',['parameters' => [
+//                 'documentos' => 'id'
+//             ]]);
+//             Route::resource('qoptions','\App\Http\Controllers\admin\QoptionsController',['parameters' => [
+//                 'qoptions' => 'id'
+//             ]]);
+//             Route::resource('permissions','\App\Http\Controllers\admin\UserPermissions',['parameters' => [
+//                 'permissions' => 'id'
+//             ]]);
 
-        Route::get('/create',[UserController::class,'create'])->name('users.create');
-        Route::post('/',[UserController::class,'store'])->name('users.store');
-        Route::get('/{id}/show',[UserController::class,'show'])->where('id', '[0-9]+')->name('users.show');
-        Route::get('/{id}/edit',[UserController::class,'edit'])->where('id', '[0-9]+')->name('users.edit');
-        Route::put('/{id}',[UserController::class,'update'])->where('id', '[0-9]+')->name('users.update');
-        Route::delete('/{id}',[UserController::class,'destroy'])->where('id', '[0-9]+')->name('users.destroy');
-    });
-    Route::prefix('estado-civil')->group(function(){
-        Route::get('/',[EstadocivilController::class,'index'])->name('estado-civil.index');
-        Route::get('/create',[EstadocivilController::class,'create'])->name('estado-civil.create');
-        Route::post('/',[EstadocivilController::class,'store'])->name('estado-civil.store');
-        Route::get('/{id}/show',[EstadocivilController::class,'show'])->name('estado-civil.show');
-        Route::get('/{id}/edit',[EstadocivilController::class,'edit'])->name('estado-civil.edit');
-        Route::put('/{id}',[EstadocivilController::class,'update'])->where('id', '[0-9]+')->name('estado-civil.update');
-        Route::post('/{id}',[EstadocivilController::class,'update'])->where('id', '[0-9]+')->name('estado-civil.update-ajax');
-        Route::delete('/{id}',[EstadocivilController::class,'destroy'])->where('id', '[0-9]+')->name('estado-civil.destroy');
-    });
-    Route::prefix('relatorios')->group(function(){
-        Route::get('/',[RelatoriosController::class,'index'])->name('relatorios.index');
-        Route::get('/social',[RelatoriosController::class,'realidadeSocial'])->name('relatorios.social');
-        Route::get('/acessos',[EventController::class,'listAcessos'])->name('relatorios.acessos');
-        Route::get('export/filter', [RelatoriosController::class, 'exportFilter'])->name('relatorios.export_filter');
-        //Route::post('/',[RelatoriosController::class,'store'])->name('relatorios.store');
-        //Route::get('/{id}/show',[RelatoriosController::class,'show'])->name('relatorios.show');
-        //Route::get('/{id}/edit',[RelatoriosController::class,'edit'])->name('relatorios.edit');
-        //Route::put('/{id}',[RelatoriosController::class,'update'])->where('id', '[0-9]+')->name('relatorios.update');
-        //Route::post('/{id}',[RelatoriosController::class,'update'])->where('id', '[0-9]+')->name('relatorios.update-ajax');
-        //Route::delete('/{id}',[RelatoriosController::class,'destroy'])->where('id', '[0-9]+')->name('relatorios.destroy');
-    });
-    Route::prefix('sistema')->group(function(){
-        Route::get('/pefil',[UserController::class,'perfilShow'])->name('sistema.perfil');
-        Route::get('/perfil/edit',[UserController::class,'perfilEdit'])->name('sistema.perfil.edit');
-        Route::post('/perfil/store',[UserController::class,'perfilStore'])->name('sistema.perfil.store');
-        Route::get('/config',[EtapaController::class,'config'])->name('sistema.config');
-        Route::post('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('sistema.update-ajax');
-    });
-    Route::prefix('uploads')->group(function(){
-        Route::get('/',[uploadController::class,'index'])->name('uploads.index');
-        Route::get('/create',[UploadController::class,'create'])->name('uploads.create');
-        Route::post('/',[UploadController::class,'store'])->name('uploads.store');
-        Route::get('/{id}/show',[UploadController::class,'show'])->name('uploads.show');
-        Route::get('/{id}/edit',[UploadController::class,'edit'])->name('uploads.edit');
-        Route::put('/{id}',[UploadController::class,'update'])->where('id', '[0-9]+')->name('uploads.update');
-        Route::post('/{id}',[UploadController::class,'update'])->where('id', '[0-9]+')->name('uploads.update-ajax');
-        Route::post('/{id}',[UploadController::class,'destroy'])->where('id', '[0-9]+')->name('uploads.destroy');
-        Route::get('export/all', [UploadController::class, 'exportAll'])->name('uploads.export_all');
-        Route::get('export/filter', [UploadController::class, 'exportFilter'])->name('uploads.export_filter');
-    });
-    Route::get('/', [App\Http\Controllers\admin\homeController::class, 'index'])->name('home');
-    // Route::get('menu/{id}', [App\Http\Controllers\HomeController::class, 'menu'])->name('menu');
-    Route::prefix('teste')->group(function(){
-        Route::get('/',[App\Http\Controllers\TesteController::class,'index'])->name('teste');
-        Route::get('/ajax',[App\Http\Controllers\TesteController::class,'ajax'])->name('teste.ajax');
-    });
+//             Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+//             Route::get('/',function(){
+//                 return redirect()->route('login');
+//             });
+//             //inicio Rotas módulo Sic
+//             Route::resource('sic','\App\Http\Controllers\admin\sicController',['as'=>'admin','parameters' => ['sic' => 'id']]);
+//             Route::get('sics/relatorios', ['\App\Http\Controllers\admin\sicController', 'relatorios'])->name('admin.sic.relatorios');
+//             Route::get('sics/config', ['\App\Http\Controllers\admin\sicController', 'config'])->name('admin.sic.config');
+//             Route::get('sics/config/{url}', ['\App\Http\Controllers\admin\sicController', 'config'])->name('admin.sic.config.edit');
+//             //Fim Rotas módulo Sic
 
-    Route::resource('produtos','\App\Http\Controllers\admin\PostController',['parameters' => [
-        'produtos' => 'id'
-    ]]);
-    Route::resource('orcamentos','\App\Http\Controllers\admin\PostController',['parameters' => [
-        'orcamentos' => 'id'
-    ]]);
-    Route::prefix('orcamentos')->group(function(){
-        Route::get('/ta/{id}',[OrcamentoController::class,'termo_aceito'])->name('termo.aceito');
-        // Route::get('/ajax',[App\Http\Controllers\TesteController::class,'ajax'])->name('teste.ajax');
-    });
+//             Route::resource('tags','\App\Http\Controllers\admin\TagsController',['parameters' => [
+//                 'tags' => 'id'
+//             ]]);
 
-    Route::resource('media','\App\Http\Controllers\admin\mediaController',['parameters' => [
-        'media' => 'id'
-    ]]);
-    Route::prefix('media')->group(function(){
-        Route::post('/store-parent',['\App\Http\Controllers\admin\mediaController','storeParent'])->name('store.parent.media');
-        Route::post('/trash',['\App\Http\Controllers\admin\mediaController','trash'])->name('trash.media');
-        // Route::get('/ajax',[App\Http\Controllers\TesteController::class,'ajax'])->name('teste.ajax');
-    });
-    // Route::resource('pacotes_lances','\App\Http\Controllers\admin\PostController',['parameters' => [
-    //     'pacotes_lances' => 'id'
-    // ]]);
-    Route::resource('paginas','\App\Http\Controllers\admin\PostController',['parameters' => [
-        'paginas' => 'id'
-    ]]);
-    Route::resource('categorias','\App\Http\Controllers\admin\categoryController',['parameters' => [
-        'categorias' => 'id'
-    ]]);
-    // Route::resource('leiloes_adm','\App\Http\Controllers\admin\PostController',['parameters' => [
-    //     'leiloes_adm' => 'id'
-    // ]]);
-    Route::resource('componentes','\App\Http\Controllers\admin\PostController',['parameters' => [
-        'componentes' => 'id'
-    ]]);
-    Route::resource('documentos','\App\Http\Controllers\DocumentosController',['parameters' => [
-        'documentos' => 'id'
-    ]]);
-    Route::resource('qoptions','\App\Http\Controllers\admin\QoptionsController',['parameters' => [
-        'qoptions' => 'id'
-    ]]);
-    Route::resource('tags','\App\Http\Controllers\admin\TagsController',['parameters' => [
-        'tags' => 'id'
-    ]]);
-    Route::resource('permissions','\App\Http\Controllers\admin\UserPermissions',['parameters' => [
-        'permissions' => 'id'
-    ]]);
-    Route::resource('menus','\App\Http\Controllers\admin\PostController',['parameters' => [
-        'menus' => 'id'
-    ]]);
-    //rotas para testes
-    Route::get('/salvar-pdf', [PdfController::class, 'salvarPdf'])->middleware('auth')->name('salvar.pdf');
-    Route::get('/gerar-pdf', [PdfController::class, 'gerarPdf'])->middleware('auth')->name('gerar.pdf');
+//             /**Rotas do sistema antigo */
+//             // Route::post('/uploads', 'FilesController@fileUpload');
+//             // Route::get('/', "UsersController@index");
+//             // Route::get('/home', "UsersController@index");
+//             // Route::resource('/users', 'UsersController', ['except' => ['show']]);
+//             // Route::resource('/players', 'PlayersController', ['except' => ['show']]);
+//             // Route::resource('/players/order', 'PlayersController@postSort');
+//             // Route::resource('/banners', 'BannersController', ['except' => ['show']]);
+//             // Route::resource('/banners/order', 'BannersController@postSort');
+//             // Route::resource('/floaters', 'FloatersController', ['except' => ['show']]);
+//             // Route::resource('/floaters/order', 'FloatersController@postSort');
+//             // Route::resource('/pages', 'PagesController', ['except' => ['show']]);
+//             // Route::resource('/pages/order', 'PagesController@postSort');
+//             // Route::resource('pages.subpages', 'SubpagesController', ['except' => 'show']);
+//             // Route::resource('/receivers', 'ReceiversController', ['except' => ['show']]);
+//             // Route::resource('/contacts', 'ContactsController', ['except' => ['show']]);
+//             // Route::resource('/sections', 'SectionsController', ['except' => ['show']]);
 
-});
-Route::get('/', [App\Http\Controllers\siteController::class, 'index'])->name('index');
+//             Route::resource('/biddings', '\App\Http\Controllers\admin\BiddingsController', ['except' => ['show']]);
+//             Route::resource('/attachments', '\App\Http\Controllers\admin\AttachmentsController', ['except' => ['show']]);
+//             Route::resource('biddings.attachments', '\App\Http\Controllers\admin\AttachmentsController', ['except' => ['show']]);
+//             // Route::resource('biddings.notifications', '\App\Http\Controllers\admin\NotificationsController', ['except' => ['show']]);
+//             // Route::resource('biddings.newsletters', '\App\Http\Controllers\admin\BiddingNewslettersController', ['except' => ['show']]);
+//             Route::resource('/biddings/{parent_id}/attachments/order', '\App\Http\Controllers\admin\AttachmentsController@postSort');
 
-Route::resource('/leiloes','\App\Http\Controllers\LeilaoController',['parameters' => [
-    'leiloes' => 'id'
-]]);
-Route::resource('/users_site','\App\Http\Controllers\UserController',['parameters' => [
-    'users_site' => 'id'
-]]);
-Route::get('/leiloes/get-data-contrato/{token}', [App\Http\Controllers\LeilaoController::class, 'view_data_contrato'])->name('data.contrato');
-Route::get('/leiloes/list-contratos/{id}', [App\Http\Controllers\LeilaoController::class, 'view_list_contrato'])->name('list.contrato');
+//             // Route::resource('/b_trimestrals', 'B_trimestralsController', ['except' => ['show']]);
+//             // Route::resource('/attachments', 'A_trimestralsController', ['except' => ['show']]);
+//             // Route::resource('b_trimestrals.attachments', 'A_trimestralsController', ['except' => ['show']]);
+//             // Route::resource('b_trimestrals.notifications', 'NotificationsController', ['except' => ['show']]);
+//             // Route::resource('b_trimestrals.newsletters', 'BiddingNewslettersController', ['except' => ['show']]);
+//             // Route::resource('/b_trimestrals/{parent_id}/attachments/order', 'A_trimestralsController@postSort');
 
-// Route::get('/test-email',[EmailController::class,'sendEmailTest']);
-Route::get('/suspenso',[UserController::class,'suspenso'])->name('cobranca.suspenso');
-Route::prefix('cobranca')->group(function(){
-    Route::get('/fechar',[UserController::class,'pararAlertaFaturaVencida'])->name('alerta.cobranca.fechar');
-});
-// Route::get('/seed-database', function(){
-//     DB::unprepared(
-//         file_get_contents(base_path() . './laravel8.sql')
-//     );
+//             // Route::resource('/file_uploads', 'UploadsController', ['only' => ['index', 'create', 'store', 'show', 'destroy']]);
+//             // Route::resource('/categories', 'CategoriesController', ['except' => ['show']]);
+//             // Route::resource('/categories/order', 'CategoriesController@postSort');
+//             Route::resource('/bidding_categories', '\App\Http\Controllers\admin\BiddingCategoriesController', ['except' => ['show']]);
+//             // Route::resource('/bidding_categories/order', 'BiddingCategoriesController@postSort');
+//             // Route::resource('/posts', 'PostsController', ['except' => ['show']]);
+//             // Route::resource('/notices', 'NoticesController', ['except' => ['show']]);
+//             // Route::resource('/newsletters', 'NewslettersController', ['except' => ['show']]);
+//             // Route::resource('/posts/order', 'PostsController@postSort');
+//             // Route::resource('/diaries', 'DiariesController', ['except' => ['show']]);
+//             // Route::resource('/docs', 'docsController', ['except' => ['show']]);
+//             // Route::get('/test', 'testController@index');
+//             Route::resource('/docfile', '\App\Http\Controllers\admin\DocfileController',['parameters' => [
+//                 'docfile' => 'id'
+//             ]]);
+
+//         });
+
+//         // Route::prefix($prefixo_site.'internautas')->group(function(){
+//         //     Route::get('/',[App\Http\Controllers\portalController::class, 'index'])->name('internautas.index');
+//         //     Route::get('/cadastrar/{tipo}',[portalController::class, 'cadInternautas'])->name('cad.internautas');
+//         //     Route::post('/cadastrar',[portalController::class,'storeInternautas'])->name('internautas.store');
+//         //     Route::get('/cadastrar/ac/{tipo}/{id}',[portalController::class,'acaoInternautas'])->name('internautas.acao.get');
+//         //     Route::get('/login',[portalController::class,'loginInternautas'])->name('internautas.login');
+//         //     Route::get('/logout',[portalController::class,'logoutInternautas'])->name('internautas.logout');
+//         //     Route::resource('sic','\App\Http\Controllers\portal\sicController',['parameters' => [
+//         //         'sic' => 'id'
+//         //     ]])->middleware('auth');;
+//         //     Route::get('sics',[sicController::class,'relatorios'])->name('sic.internautas.relatorios');
+
+//         // });
+
+//         Route::prefix($prefixo_admin.'/users')->group(function(){
+//             Route::get('/',[UserController::class,'index'])->name('users.index');
+
+//             Route::get('/ajax',[UserController::class,'paginacaoAjax'])->name('users.ajax');
+//             Route::get('/lista.ajax',function(){
+//                 return view('users.index_ajax');
+//             });
+
+//             Route::get('/create',[UserController::class,'create'])->name('users.create');
+//             Route::post('/',[UserController::class,'store'])->name('users.store');
+//             Route::get('/{id}/show',[UserController::class,'show'])->where('id', '[0-9]+')->name('users.show');
+//             Route::get('/{id}/edit',[UserController::class,'edit'])->where('id', '[0-9]+')->name('users.edit');
+//             Route::put('/{id}',[UserController::class,'update'])->where('id', '[0-9]+')->name('users.update');
+//             Route::delete('/{id}',[UserController::class,'destroy'])->where('id', '[0-9]+')->name('users.destroy');
+//         });
+
+//         Route::prefix($prefixo_admin.'/escolaridades')->group(function(){
+//             Route::get('/',[EscolaridadeController::class,'index'])->name('escolaridades.index');
+//             Route::get('/create',[EscolaridadeController::class,'create'])->name('escolaridades.create');
+//             Route::post('/',[EscolaridadeController::class,'store'])->name('escolaridades.store');
+//             Route::get('/{id}/show',[EscolaridadeController::class,'show'])->name('escolaridades.show');
+//             Route::get('/{id}/edit',[EscolaridadeController::class,'edit'])->name('escolaridades.edit');
+//             Route::put('/{id}',[EscolaridadeController::class,'update'])->where('id', '[0-9]+')->name('escolaridades.update');
+//             Route::post('/{id}',[EscolaridadeController::class,'update'])->where('id', '[0-9]+')->name('escolaridades.update-ajax');
+//             Route::delete('/{id}',[EscolaridadeController::class,'destroy'])->where('id', '[0-9]+')->name('escolaridades.destroy');
+//         });
+//         Route::prefix($prefixo_admin.'/estado-civil')->group(function(){
+//             Route::get('/',[EstadocivilController::class,'index'])->name('estado-civil.index');
+//             Route::get('/create',[EstadocivilController::class,'create'])->name('estado-civil.create');
+//             Route::post('/',[EstadocivilController::class,'store'])->name('estado-civil.store');
+//             Route::get('/{id}/show',[EstadocivilController::class,'show'])->name('estado-civil.show');
+//             Route::get('/{id}/edit',[EstadocivilController::class,'edit'])->name('estado-civil.edit');
+//             Route::put('/{id}',[EstadocivilController::class,'update'])->where('id', '[0-9]+')->name('estado-civil.update');
+//             Route::post('/{id}',[EstadocivilController::class,'update'])->where('id', '[0-9]+')->name('estado-civil.update-ajax');
+//             Route::delete('/{id}',[EstadocivilController::class,'destroy'])->where('id', '[0-9]+')->name('estado-civil.destroy');
+//         });
+//         Route::prefix($prefixo_admin.'/etapas')->group(function(){
+//             Route::get('/',[EtapaController::class,'index'])->name('etapas.index');
+//             Route::get('/create',[EtapaController::class,'create'])->name('etapas.create');
+//             Route::post('/',[EtapaController::class,'store'])->name('etapas.store');
+//             Route::get('/{id}/show',[EtapaController::class,'show'])->name('etapas.show');
+//             Route::get('/{id}/edit',[EtapaController::class,'edit'])->name('etapas.edit');
+//             Route::put('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('etapas.update');
+//             Route::post('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('etapas.update-ajax');
+//             Route::delete('/{id}',[EtapaController::class,'destroy'])->where('id', '[0-9]+')->name('etapas.destroy');
+//         });
+//         Route::prefix($prefixo_admin.'/relatorios')->group(function(){
+//             Route::get('/',[RelatoriosController::class,'index'])->name('relatorios.index');
+//             Route::get('/social',[RelatoriosController::class,'realidadeSocial'])->name('relatorios.social');
+//             Route::get('/evolucao',[RelatoriosController::class,'create'])->name('relatorios.evolucao');
+//             Route::get('export/filter', [RelatoriosController::class, 'exportFilter'])->name('relatorios.export_filter');
+//         });
+//         Route::prefix($prefixo_admin.'/sistema')->group(function(){
+//             //Route::get('/pefil',[EtapaController::class,'index'])->name('sistema.perfil');
+//             Route::get('/pefil',[UserController::class,'perfilShow'])->name('perfil.show');
+//             Route::get('/pefil/edit',[UserController::class,'perfilEdit'])->name('perfil.edit');
+
+//             Route::get('/config',[EtapaController::class,'config'])->name('sistema.config');
+//             Route::post('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('sistema.update-ajax');
+//         });
+//         Route::prefix('uploads')->group(function(){
+//             Route::get('/',[uploadController::class,'index'])->name('uploads.index');
+//             Route::get('/create',[UploadController::class,'create'])->name('uploads.create');
+//             Route::post('/',[UploadController::class,'store'])->name('uploads.store');
+//             Route::get('/{id}/show',[UploadController::class,'show'])->name('uploads.show');
+//             Route::get('/{id}/edit',[UploadController::class,'edit'])->name('uploads.edit');
+//             Route::put('/{id}',[UploadController::class,'update'])->where('id', '[0-9]+')->name('uploads.update');
+//             Route::post('/{id}',[UploadController::class,'update'])->where('id', '[0-9]+')->name('uploads.update-ajax');
+//             Route::post('/{id}',[UploadController::class,'destroy'])->where('id', '[0-9]+')->name('uploads.destroy');
+//             Route::get('export/all', [UploadController::class, 'exportAll'])->name('uploads.export_all');
+//             Route::get('export/filter', [UploadController::class, 'exportFilter'])->name('uploads.export_filter');
+//         });
+//         Route::fallback(function () {
+//             return view('erro404');
+//         });
+//         Route::get('menu/{id}', [App\Http\Controllers\HomeController::class, 'menu'])->name('menu');
+//         Route::prefix('teste')->group(function(){
+//             Route::get('/',[App\Http\Controllers\TesteController::class,'index'])->name('teste');
+//             Route::get('/ajax',[App\Http\Controllers\TesteController::class,'ajax'])->name('teste.ajax');
+//         });
+
+//         //Route::post('/upload',[App\Http\Controllers\UploadFile::class,'upload'])->name('teste.upload');
+
+
+
+//         // Auth::routes();
+
+//         Route::post('/tinymce', function (Request $request) {
+//             $content = $request->content;
+//             return view('testes.show')->with(compact('content'));
+//         })->name('tinymce.store');
+
+
+//         Route::get('envio-mails',function(){
+//             $user = new stdClass();
+//             $user->name = 'Fernando Queta';
+//             $user->email = 'ferqueta@yahoo.com.br';
+//             return new \App\Mail\sic\infoSolicitacao($user);
+//             //$enviar = Mail::send(new \App\Mail\dataBrasil($user));
+//             //return $enviar;
+//         });
+//         Route::get('envio-mails-veriuser',function(){
+//             $user = new stdClass();
+//             $user->name = 'Fernando Queta';
+//             $user->email = 'ferqueta@yahoo.com.br';
+//             //return new \App\Mail\veriUser($user);
+//             $enviar = Mail::send(new \App\Mail\veriUser($user));
+//             return $enviar;
+//         });
+
+//         /*
+//         Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['web', 'auth']], function () {
+//             \UniSharp\LaravelFilemanager\Lfm::routes();
+//         });*/
+//     });
+//     Route::get($prefixo_site,[App\Http\Controllers\portalController::class, 'index'])->name('portal');
+//     Route::prefix($prefixo_site.'internautas')->group(function(){
+//         Route::get('/',[App\Http\Controllers\portalController::class, 'index'])->name('internautas.index');
+//         Route::get('/cadastrar/{tipo}',[portalController::class, 'cadInternautas'])->name('cad.internautas');
+//         Route::post('/cadastrar',[portalController::class,'storeInternautas'])->name('internautas.store');
+//         Route::get('/cadastrar/ac/{tipo}/{id}',[portalController::class,'acaoInternautas'])->name('internautas.acao.get');
+//         Route::get('/login',[portalController::class,'loginInternautas'])->name('internautas.login');
+//         Route::get('/logout',[portalController::class,'logoutInternautas'])->name('internautas.logout');
+//         Route::resource('sic','\App\Http\Controllers\portal\sicController',['parameters' => [
+//             'sic' => 'id'
+//         ]])->middleware('tenant.auth');
+//         Route::get('sics',[sicController::class,'relatorios'])->name('sic.internautas.relatorios');
+
+//     });
 // });
-Route::get('envio-mails',function(){
-    $user = new stdClass();
-    $user->name = 'Fernando Queta';
-    $user->email = 'ger.maisaqui3@gmail.com';
-    return new \App\Mail\dataBrasil($user);
-    // $enviar = Mail::send(new \App\Mail\dataBrasil($user));
-    // return $enviar;
-});
-Route::resource('lances','\App\Http\Controllers\LanceController',['parameters' => [
-    'lances' => 'id'
-]]);
-// Route::prefix('user')->group(function(){
-//     Route::get('/login',[App\Http\Controllers\UserController::class,'user_login_jwt'])->name('user.login.jwt');
-// });
-Route::prefix('ajax')->group(function(){
-    // Route::post('/excluir-reserva-lance',[App\Http\Controllers\LanceController::class,'excluir_reserva']);
-    // Route::post('/ger-seguidores',[App\Http\Controllers\LeilaoController::class,'ger_seguidores']);
-    Route::post('/notification',[App\Http\Controllers\NotificationController::class,'receive_ajax']);
-    // Route::post('/session-m',[App\Http\Controllers\admin\sessionController::class,'sessionManagerAction']);
-    // Route::post('/reciclar-leilao/{leilao_id}',[LeilaoController::class,'reciclar'])->name('leiloes.reciclar');
-    // Route::post('/tornar-vencedor',[LanceController::class,'tornar_vencedor'])->name('leiloes.tornar_vencedor');
-    Route::post('/enviar-contato',[ContatoController::class,'enviar_contato'])->name('enviar.contato');
-    // Route::post('/pre-cadastro-escola',[UserController::class,'pre_cadastro_escola'])->name('user.pre_cadastro_escola');
-    Route::post('/get-rab',[OrcamentoController ::class,'get_rab'])->name('ajax.orcamento.rab');
-    Route::get('/get-aeronave/{matricula}',[OrcamentoController ::class,'get_info_by_matricula'])->name('ajax.get_aeronave');
-    Route::post('/enviar-agendamento',[OrcamentoController ::class,'enviar_orcamento'])->name('orcamento.enviar');
-    Route::post('/send-to-zapsing',[OrcamentoController ::class,'sendToZapsing'])->name('send.zapsing');
-});
-Route::prefix('notification')->group(function(){
-    Route::get('/index',[App\Http\Controllers\NotificationController::class,'index'])->name('notification.index');
-    // Route::post('/notification',[App\Http\Controllers\NotificationController::class,'receive_ajax']);
-});
-//inicio Rotas de verificação
-Route::get('/email/verify', function () {
-    // return view('auth.verify');
-    return view('site.index');
-})->middleware('auth')->name('verification.notice');
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
-
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-
-    return redirect('/');
-})->middleware(['auth', 'signed'])->name('verification.verify');
-
-Route::post('/email/verification-notification', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return back()->with('message-very', 'enviado');
-})->middleware(['auth', 'throttle:6,1'])->name('verification.resend');
-
-//Routa para postar o pagamento.
-Route::post('/payment',[PaymentController::class,'init'])->name('payment');
-
-//Fim rotas de verificação
-
-Route::get('/{slug}', [App\Http\Controllers\siteController::class, 'index'])->name('site.index');
-Route::get('/{slug}/{id}', [App\Http\Controllers\siteController::class, 'index'])->name('site.index2');
-Route::get('/{slug}/{id}/{sec}', [App\Http\Controllers\siteController::class, 'index'])->name('site.index3');
-Route::get('/{slug}/{id}/{sec}/{token}', [App\Http\Controllers\siteController::class, 'index'])->name('site.index4');

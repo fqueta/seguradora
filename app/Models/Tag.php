@@ -18,6 +18,8 @@ class Tag extends Model
         'ativo',
         'autor',
         'obs',
+        'ordem',
+        'pai',
         'excluido',
         'reg_excluido',
         'deletado',

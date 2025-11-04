@@ -28,6 +28,7 @@ class ProfissaoSeeder extends Seeder
             'NÃO INFORMADO',
             'OUTRA',
         ];
+        profissao::truncate();
         foreach ($arr as $key => $value) {
             profissao::create([
                 'nome'=>$value,

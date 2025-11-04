@@ -19,14 +19,16 @@ class TagsController extends Controller
     public $routa;
     public $label;
     public $view;
+    public $url;
     public $tab;
     public function __construct(User $user)
     {
         $this->middleware('auth');
         $this->user = $user;
         $this->routa = 'tags';
-        $this->tab = 'tags';
         $this->label = 'Tag';
+        $this->url = 'tags';
+        $this->tab = 'tags';
         $this->view = 'padrao';
     }
     public function queryTag($get=false,$config=false)
@@ -114,8 +116,7 @@ class TagsController extends Controller
                 'label'=>'Pai',
                 'active'=>true,
                 'type'=>'select',
-                //'arr_opc'=>Qlib::sql_array("SELECT id,nome FROM tags WHERE ativo='s' AND pai IS NULL ORDER BY ordem ASC",'nome','id'),'exibe_busca'=>'d-block',
-                'arr_opc'=>Qlib::sql_array("SELECT id,nome FROM tags WHERE ativo='s' ORDER BY ordem ASC",'nome','id'),'exibe_busca'=>'d-block',
+                'arr_opc'=>Qlib::sql_array("SELECT id,nome FROM tags WHERE ativo='s' AND pai IS NULL ORDER BY ordem ASC",'nome','id'),'exibe_busca'=>'d-block',
                 'event'=>'',
                 'tam'=>'10',
                 'value'=>@$_GET['etapa'],
@@ -124,7 +125,7 @@ class TagsController extends Controller
             'ordem'=>['label'=>'ordem','active'=>true,'type'=>'number','placeholder'=>'','exibe_busca'=>'d-block','event'=>'','tam'=>'2','class'=>''],
             'nome'=>['label'=>'Nome da opção','active'=>true,'placeholder'=>'','type'=>'text','exibe_busca'=>'d-block','event'=>'','tam'=>'12'],
             'obs'=>['label'=>'Observação','active'=>false,'type'=>'textarea','exibe_busca'=>'d-block','event'=>'','tam'=>'12','class'=>''],
-            'ativo'=>['label'=>'Liberar','active'=>true,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
+            'ativo'=>['label'=>'Liberar','tab'=>$this->tab,'active'=>true,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['s'=>'Sim','n'=>'Não']],
         ];
     }
 
@@ -147,6 +148,7 @@ class TagsController extends Controller
             'config'=>$queryTag['config'],
             'routa'=>$routa,
             'view'=>$this->view,
+            'url'=>$this->url,
             'i'=>0,
         ]);
     }
@@ -159,6 +161,7 @@ class TagsController extends Controller
             'ac'=>'cad',
             'frm_id'=>'frm-tags',
             'route'=>$this->routa,
+            'url'=>$this->url,
         ];
         $value = [
             'token'=>uniqid(),
@@ -231,6 +234,7 @@ class TagsController extends Controller
                 'ac'=>'alt',
                 'frm_id'=>'frm-tags',
                 'route'=>$this->routa,
+                'url'=>$this->url,
                 'id'=>$id,
             ];
 
@@ -243,7 +247,6 @@ class TagsController extends Controller
                 'campos'=>$campos,
                 'exec'=>true,
             ];
-
             return view($this->view.'.createedit',$ret);
         }else{
             $ret = [
@@ -302,10 +305,6 @@ class TagsController extends Controller
                 'mens'=>'Erro ao receber dados',
                 'color'=>'danger',
             ];
-        }
-        if($atualizar){
-            //REGISTRAR EVENTOS
-            (new EventController)->listarEvent(['tab'=>$this->tab,'this'=>$this]);
         }
         if($ajax=='s'){
             $ret['return'] = route($route).'?idCad='.$id;
