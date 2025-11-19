@@ -146,6 +146,18 @@ class ContratoController extends Controller
                 // $salvar_contrado = Qlib::update_tab('contratos',[
                 //     'config'=>Qlib::lib_array_json($ret['data']),
                 // ],"WHERE token='$token'");
+            }else{
+                // Log: contratação rejeitada
+                ContractEventLogger::logByToken(
+                    $token,
+                    'integracao_sulamerica',
+                    'Contratação realizada pela SulAmérica',
+                    [
+                        'numOperacao' => $numOperacao,
+                        'ret' => $ret,
+                    ],
+                    auth()->id()
+                );
             }
         }
         return $ret;
