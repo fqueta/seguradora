@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\admin\ContratoController;
 use App\Http\Controllers\Controller;
+use App\Services\ContractEventLogger;
 use App\Qlib\Qlib;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -131,7 +132,31 @@ class SulAmericaController extends Controller
             </soapenv:Body>
         </soapenv:Envelope>
         ';
-        // dd($xml);
+        // Log de início da contratação (start)
+        ContractEventLogger::logByToken(
+            $operacaoParceiro,
+            'contratacao_start',
+            'Início do processamento do método contratacao (SulAmérica)',
+            [
+                'request' => [
+                    'produto' => $produto,
+                    'canalVenda' => $canalVenda,
+                    'operacaoParceiro' => $operacaoParceiro,
+                    'parametros' => [
+                        'planoProduto' => $planoProduto,
+                        'premioSeguro' => $premioSeguro,
+                        'inicioVigencia' => $inicioVigencia,
+                        'fimVigencia' => $fimVigencia,
+                        'uf' => $uf,
+                        'tipoDocumento' => $tipoDocumento,
+                        'sexo' => $sexo,
+                        'nomeSegurado' => $nomeSegurado,
+                        'documento_masked' => strlen($documento) ? substr($documento,0,3).'****'.substr($documento,-2) : null,
+                    ],
+                ],
+            ],
+            auth()->id()
+        );
         $response = Http::withHeaders([
             'Content-Type' => 'application/xml',//'text/xml; charset=utf-8',
             'SOAPAction' => '',
@@ -143,6 +168,17 @@ class SulAmericaController extends Controller
         // $ret['passwordDigest'] = $passwordDigest;
         $ret['body'] = $resposta;
         $ret = $this->xmlContrata_to_array($resposta,$config);
+        // Log de término da contratação (end)
+        ContractEventLogger::logByToken(
+            $operacaoParceiro,
+            'contratacao_end',
+            'Fim do processamento do método contratacao (SulAmérica)',
+            [
+                'success' => isset($ret['exec']) ? (bool)$ret['exec'] : null,
+                'response' => $ret,
+            ],
+            auth()->id()
+        );
         return $ret; // Retorna a resposta do WebService
     }
     /**
@@ -156,12 +192,36 @@ class SulAmericaController extends Controller
         $canalVenda = isset($config['canalVenda']) ? $config['canalVenda'] : 'site';
         $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : '032025';
         $token_contrato = isset($config['token_contrato']) ? $config['token_contrato'] : '';
+        // dd($token_contrato);
         if(!$numeroOperacao){
             $ret['exec'] = false;
             $ret['mens'] = 'Número de operação é obrigatório';
+            ContractEventLogger::logByToken(
+                $token_contrato,
+                'cancelamento_end',
+                $ret['mens'],
+                [
+                    'success' => isset($ret['exec']) ? (bool)$ret['exec'] : null,
+                    'response' => $ret,
+                ],
+                auth()->id()
+            );
+            return $ret;
+        }elseif(!$token_contrato){
+            $ret['exec'] = false;
+            $ret['mens'] = 'Token de contrato é obrigatório';
+            ContractEventLogger::logByToken(
+                $token_contrato,
+                'cancelamento_end',
+                $ret['mens'],
+                [
+                    'success' => isset($ret['exec']) ? (bool)$ret['exec'] : null,
+                    'response' => $ret,
+                ],
+                auth()->id()
+            );
             return $ret;
         }
-        // dd($config);
         $xml = '
         <soapenv:Envelope
             xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -198,6 +258,19 @@ class SulAmericaController extends Controller
         if(isset($ret['exec']) && !empty($token_contrato)){
             //Atualizar o status do contrato
             (new ContratoController)->status_update($token_contrato,'Cancelado',$ret);
+        }
+        if(!empty($token_contrato)){
+            // Log de término do cancelamento (end)
+            ContractEventLogger::logByToken(
+                $token_contrato,
+                'cancelamento_end',
+                'Fim do processamento do cancelamento (SulAmérica)',
+                [
+                    'success' => isset($ret['exec']) ? (bool)$ret['exec'] : null,
+                    'response' => $ret,
+                ],
+                auth()->id()
+            );
         }
         return $ret; // Retorna a resposta do WebService
     }

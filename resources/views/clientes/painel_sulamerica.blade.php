@@ -46,7 +46,9 @@
         @endif
     @endif
 </div>
-<div class="row mb-4 ml-0 mr-0 ">
+{{-- Timeline de histórico do contrato (SulAmérica) --}}
+{{-- @include('clientes.partials.contrato_history', ['token' => $token]) --}}
+{{-- <div class="row mb-4 ml-0 mr-0 ">
     @if (isset($processo_cancelamento['data_cancelamento']))
         <div class="col-md-12 text-right">
             <h4 class="text-center bg-secondary">{{ __('Processo de cancelamento (Acompanhamento Local)') }}</h4><hr>
@@ -61,5 +63,9 @@
                 </tr>
             </table>
         </div>
+        <div class="col-md-12 text-right">
+                <button title="{{__('Reativar cadastro')}}" onclick="reativar_cadastro('{{$token}}','{{ URL::full() }}')" type="button" class="btn btn-outline-secondary ml-1"><i class="fa fa-recycle"></i> {{ __('Reativar sulamerica') }}</button>
+            </div>
+
     @endif
-</div>
+</div> --}}

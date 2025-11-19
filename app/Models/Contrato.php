@@ -21,4 +21,12 @@ class Contrato extends Model
         'deletado',
         'reg_excluido'
     ];
+
+    /**
+     * Relação: um contrato possui vários eventos de histórico.
+     */
+    public function events()
+    {
+        return $this->hasMany(ContractEvent::class, 'contrato_id');
+    }
 }

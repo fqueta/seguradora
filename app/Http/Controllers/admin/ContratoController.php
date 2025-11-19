@@ -9,6 +9,7 @@ use App\Models\Qoption;
 use App\Models\User;
 use App\Qlib\Qlib;
 use Illuminate\Http\Request;
+use App\Services\ContractEventLogger;
 
 class ContratoController extends Controller
 {
@@ -96,6 +97,8 @@ class ContratoController extends Controller
             $ret = (new SulAmericaController)->contratacao($config);
             $salvar = false;
             // dump($config);
+            // dd($ret);
+            //registrar na tabela contrata
             if(isset($ret['exec']) && isset($ret['data'])){
                 //salvar resultado do processamento
                 $numOperacao = isset($ret['data']['numOperacao']) ? $ret['data']['numOperacao'] : null;
@@ -108,6 +111,17 @@ class ContratoController extends Controller
                     $salv_json_fiels = Qlib::update_json_fields('users','id',$id_cliente,'config',$campo_meta2,$numOperacao);
                     // $salv_json_fiels = Qlib::update_json_fields('users','id',$id_cliente,'config',$campo_meta3,$status_aprovdo);
                     $update_status = $this->status_update($token,$status_aprovdo,$ret);
+                    // Log: contratação aprovada
+                    ContractEventLogger::logByToken(
+                        $token,
+                        'integracao_sulamerica',
+                        'Contratação aprovada pela SulAmérica',
+                        [
+                            'numOperacao' => $numOperacao,
+                            'ret' => $ret,
+                        ],
+                        auth()->id()
+                    );
                     if( Qlib::isAdmin(1)){
                         $ret['config'] = $config;
                         $ret['salvar'] = $salvar;
@@ -116,6 +130,18 @@ class ContratoController extends Controller
                         $ret['update_status'] = $update_status;
                         // $ret['dc'] = $dc;
                     }
+                }else{
+                    // Log: contratação rejeitada
+                    ContractEventLogger::logByToken(
+                        $token,
+                        'integracao_sulamerica',
+                        'Contratação rejeitada pela SulAmérica',
+                        [
+                            'numOperacao' => $numOperacao,
+                            'ret' => $ret,
+                        ],
+                        auth()->id()
+                    );
                 }
                 // $salvar_contrado = Qlib::update_tab('contratos',[
                 //     'config'=>Qlib::lib_array_json($ret['data']),
@@ -135,6 +161,8 @@ class ContratoController extends Controller
         $ret = ['exec'=>false,'mens'=>'','color'=>'danger'];
         try {
             if(isset($dc['id']) && ($id_cliente=$dc['id'])){
+                // Captura status anterior antes da atualização
+                $oldStatus = Qlib::get_usermeta($id_cliente,$this->campo_meta3,true);
                 $salvar3 = Qlib::update_usermeta($id_cliente,$this->campo_meta3,$status);
                 $salv_json_fiels = Qlib::update_json_fields('users','id',$id_cliente,'config',$this->campo_meta3,$status);
                 if( Qlib::isAdmin(1)){
@@ -145,6 +173,18 @@ class ContratoController extends Controller
                     // $ret['salvar_contrado'] = $salvar_contrado;
                     $ret['dc'] = $dc;
                 }
+                // Log: atualização de status
+                ContractEventLogger::logStatusChangeByToken(
+                    $token_contrato,
+                    $oldStatus,
+                    $status,
+                    'Status do contrato atualizado',
+                    [
+                        'user_id' => auth()->id(),
+                        'result' => $ret,
+                    ],
+                    auth()->id()
+                );
             }
             if(isset($ret['data'])){
                 $ret['salvar_contrado'] = Qlib::update_tab('contratos',[
@@ -195,6 +235,17 @@ class ContratoController extends Controller
                 $ret['dc'] = $dc;
                 $ret['mens'] = __('Retivação inciada com sucesso!!');
                 $ret['color'] = 'success';
+                // Log: reativação iniciada com troca de token
+                ContractEventLogger::logByToken(
+                    $new_token,
+                    'reativacao',
+                    'Reativação iniciada com novo token',
+                    [
+                        'old_token' => $token,
+                        'new_token' => $new_token,
+                    ],
+                    auth()->id()
+                );
             }
             $ret['delete1'] = $delete1;
             $ret['salv_json_fiels'] = $salv_json_fiels;
@@ -220,14 +271,61 @@ class ContratoController extends Controller
     /**
      * Canelar um contrato.
      */
-    public function cancelar($numOperacao=false)
+    public function cancelar($numOperacao=false,$token_contrato=false)
     {
         $ret = ['exec'=>false,'mens'=>'Erro ao cancelar'];
         if($numOperacao){
             $ret = (new sulAmericaController)->cancelamento(['numeroOperacao'=>$numOperacao]);
         }
-
+        //adicionar evento de cancelamento
+        if($ret['exec'] && $token_contrato){
+            ContractEventLogger::logByToken(
+                $token_contrato,
+                'cancelamento',
+                'Cancelamento do contrato',
+                [
+                    'numeroOperacao' => $numOperacao,
+                ],
+                auth()->id()
+            );
+        }
         return $ret;
+    }
+
+    /**
+     * Lista o histórico de eventos de um contrato por token.
+     *
+     * Português: Recupera o contrato pelo token e lista apenas os eventos
+     * dos tipos 'integracao_sulamerica', 'reativacao' e 'cancelamento', ordenados por data
+     * de criação (decrescente), para exibição em timeline.
+     *
+     * English: Fetch contract by token and list only events of types
+     * 'integracao_sulamerica' and 'reativacao', ordered by creation date
+     * (desc) for timeline rendering on the details page.
+     *
+     * @param string $token Token único do contrato
+     * @return \Illuminate\View\View
+     */
+    public function history(string $token)
+    {
+        // Busca contrato pelo token
+        $contrato = Contrato::where('token', $token)->first();
+
+        if (!$contrato) {
+            abort(404, 'Contrato não encontrado.');
+        }
+        // Carrega eventos relacionados ao contrato: integração, reativação e cancelamento
+        $events = \App\Models\ContractEvent::with('user')
+            ->where('contrato_id', $contrato->id)
+            ->whereIn('event_type', ['integracao_sulamerica', 'reativacao', 'cancelamento'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Retorna view com dados para renderização da timeline
+        return view('admin.contratos.history', [
+            'contrato' => $contrato,
+            'events' => $events,
+        ]);
     }
     /**
      * Display a listing of the resource.

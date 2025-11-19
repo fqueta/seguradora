@@ -1,3 +1,5 @@
+{{-- se a variavel $config['value'] for vazia não aparece o campo --}}
+@if (isset($config['value']) && $config['value']!='')
 @if (isset($config['type']))
     @if ($config['type']=='select')
         <div class="col-{{$config['tam']}}"  div-id="{{$config['campo']}}" >
@@ -13,7 +15,7 @@
         @if (isset($config['arr_opc']))
         <div class="col-{{$config['col']}}-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
             @if ($config['label'])
-                <label for="{{$config['campo']}}">{{$config['label']}}:</label>
+                <label for="{{$config['campo']}}">{{$config['label']}}:</label>&nbsp;
             @endif
             @foreach ($config['arr_opc'] as $k=>$v)
                 @if(isset($config['value']) && is_array($config['value']) && in_array($k,$config['value']))
@@ -54,7 +56,7 @@
         </div>
     @elseif ($config['type']=='radio_btn')
         <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
-            <label for="{{$config['campo']}}">{{$config['label']}}</label>:
+            <label for="{{$config['campo']}}">{{$config['label']}}</label>:&nbsp;
             @if(isset($config['arr_opc'][$config['value']]))
                 {!!$config['arr_opc'][$config['value']]!!}
             @else
@@ -65,6 +67,12 @@
         <div class="col-{{$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
             <label for="{{$config['campo']}}">{{$config['label']}}</label><br>
             @if(isset($config['value'])){!!$config['value']!!}@endif
+        </div>
+    @elseif ($config['type']=='date' || $config['type']=='datetime' || $config['label']=='Início Vigência*' || $config['label']=='Fim Vigência*')
+        {{-- formatar a data para dd/mm/yyyy --}}
+        <div class="col-{{$config['tam_show']??$config['tam']}} {{$config['class_div']}}" div-id="{{$config['campo']}}">
+            <label for="{{$config['campo']}}">{{$config['label']}}</label>:&nbsp;
+            @if(isset($config['value'])){{ date('d/m/Y', strtotime($config['value'])) }}@endif
         </div>
     @elseif ($config['type']=='html')
         @php
@@ -331,3 +339,5 @@
     </div>
     @endif
 @endif
+@endif
+

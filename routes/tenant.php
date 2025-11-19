@@ -218,6 +218,9 @@ Route::middleware([
         Route::resource('/contratos', '\App\Http\Controllers\admin\PostsController',['parameters' => [
             'contratos' => 'id'
         ]]);
+        // Histórico de eventos por contrato (timeline)
+        Route::get('/contratos/{token}/history', [\App\Http\Controllers\admin\ContratoController::class, 'history'])
+            ->name('contratos.history');
         Route::resource('/archives_category', '\App\Http\Controllers\admin\DefaultController',['parameters' => [
             'archives_category' => 'id'
         ]]);

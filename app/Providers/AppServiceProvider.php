@@ -8,6 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Contracts\Events\Dispatcher;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,7 +19,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Ignora migrations do Sanctum quando suportado (evita duplicidade em multi-tenant).
+        // Fallback seguro quando a versão instalada não possui este método.
+        if (method_exists(Sanctum::class, 'ignoreMigrations')) {
+            Sanctum::ignoreMigrations();
+        }
     }
 
     /**

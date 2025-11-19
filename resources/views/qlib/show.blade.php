@@ -44,7 +44,8 @@
             {{App\Qlib\Qlib::qShow([
                     'type'=>@$v['type'],
                     'campo'=>$k,
-                    'label'=>$v['label'],
+                    // Use null-coalescing to avoid undefined key warnings on PHP 8+
+                    'label'=>($v['label'] ?? ''),
                     'placeholder'=>@$v['placeholder'],
                     'ac'=>$config['ac'],
                     'value'=>isset($v['value'])?$v['value']: @$value[$k],

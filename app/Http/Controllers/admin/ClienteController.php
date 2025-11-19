@@ -15,6 +15,7 @@ use stdClass;
 use App\Qlib\Qlib;
 use App\Rules\FullName;
 use App\Rules\RightCpf;
+use App\Services\ContractEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -267,7 +268,7 @@ class ClienteController extends Controller
         }
         $id_produto_padrao = Qlib::qoption('produtoParceiro') ? Qlib::qoption('produtoParceiro') : '10232'; //unico produto padrão que pode ser contratado pela sulameriaca
         $ret = [
-            'sep2'=>['label'=>'info','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>$info_obs,'script_show'=>''],
+            'sep2'=>['label'=>'Dados','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>$info_obs,'script_show'=>''],
             'id'=>['label'=>'Id','js'=>true,'active'=>true,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
             'config[id_produto]'=>['label'=>'Id do produto','js'=>false,'cp_busca'=>'config][rg','active'=>false,'type'=>'hidden_text','exibe_busca'=>'d-block','event'=>'','tam'=>'12','value'=>$id_produto_padrao],
             'tipo_pessoa'=>[
@@ -330,8 +331,8 @@ class ClienteController extends Controller
             //'foto_perfil'=>['label'=>'Foto','active'=>false,'js'=>false,'placeholder'=>'','type'=>'file','exibe_busca'=>'d-none','event'=>'','tam'=>'12'],
             'info_contrato'=>['label'=>'contrato','active'=>false,'type'=>'html_script','exibe_busca'=>'d-none','event'=>'','tam'=>'12','script'=>'<h4 class="text-center bg-secondary">'.__('Contrato Sulamerica').'</h4><hr>','script_show'=>'<h4 class="text-center">'.__('Contrato').'</h4><hr>'],
             // 'config[token]'=>['label'=>'token','js'=>true,'active'=>false,'type'=>'hidden','exibe_busca'=>'d-block','event'=>'','tam'=>'2'],
-            'config[inicioVigencia]'=>['label'=>'Início Vigência*','active'=>true,'type'=>'date','tam'=>'3','exibe_busca'=>'d-block','event'=>'required onchange=calculaFim(this.value)','cp_busca'=>'config][inicioVigencia','class_div'=>''],
-            'config[fimVigencia]'=>['label'=>'Fim Vigência*','active'=>true,'type'=>'date','tam'=>'3','exibe_busca'=>'d-block','event'=>'required','cp_busca'=>'config][fimVigencia','class_div'=>''],
+            'config[inicioVigencia]'=>['label'=>'Início Vigência*','active'=>true,'type'=>'date','tam'=>'3','tam_show'=>'3','exibe_busca'=>'d-block','event'=>'required onchange=calculaFim(this.value)','cp_busca'=>'config][inicioVigencia','class_div'=>''],
+            'config[fimVigencia]'=>['label'=>'Fim Vigência*','active'=>true,'type'=>'date','tam'=>'3','tam_show'=>'3','exibe_busca'=>'d-block','event'=>'required','cp_busca'=>'config][fimVigencia','class_div'=>''],
             // 'config[premioSeguro]'=>['label'=>'Valor','title'=>'Valor do premio' ,'active'=>false,'type'=>'hidden','tam'=>'2','exibe_busca'=>'d-block','event'=>'required','cp_busca'=>'config][premioSeguro','class_div'=>''],
             'config[numCertificado]'=>['label'=>'C.','active'=>false,'type'=>'hidden_text','tam'=>'2','exibe_busca'=>'d-block','event'=>'','cp_busca'=>'config][numCertificado','class_div'=>''],
             'config[numOperacao]'=>['label'=>'N.°','active'=>false,'type'=>'hidden_text','tam'=>'2','exibe_busca'=>'d-block','event'=>'','cp_busca'=>'config][numOperacao','class_div'=>''],
@@ -364,9 +365,10 @@ class ClienteController extends Controller
                 }elseif($status!='Aprovado' && $status!='Cancelado'){
                     // $status_contrato = $this->get_status_contrato($id_cliente);
                     $ret['config[status_contrato]']['type'] = 'select';
-                    $ret['config[status_contrato]']['arr_opc'] = Qlib::sql_array("SELECT value,nome FROM tags WHERE ativo='s' AND pai ='status_contratos'",'nome','value');
+                    $ret['config[status_contrato]']['arr_opc'] = Qlib::sql_array("SELECT value,nome FROM tags WHERE ativo='s' AND pai ='status_contratos' AND id !='2'",'nome','value');
                     $ret['config[status_contrato]']['option_select'] = true;
                     $ret['config[status_contrato]']['event'] = '';
+                    // dd($ret);
                 }
             }
             //Libera essa opção se o parceiro estiver ativo
@@ -682,6 +684,7 @@ class ClienteController extends Controller
         if(!$status_contrato){
             return ['exec'=>false,'mens'=>'Status do contrato inválido','color'=>'danger'];
         }
+        // dd($id_cliente);
         $ret = (new ClientesController)->cancelar_contrato($id_cliente);
         return $ret;
     }
@@ -695,6 +698,7 @@ class ClienteController extends Controller
         $id_produto = isset($dados['id_produto']) ? $dados['id_produto'] : false;
         $inicio = isset($dados['inicioVigencia']) ? $dados['inicioVigencia'] : false;
         // $ac = isset($ac) ? $ac : 'cad';
+        $token_contrato = isset($dados['token']) ? $dados['token'] : false;
         $fim = isset($dados['fimVigencia']) ? $dados['fimVigencia'] : false;
         if(!$id_cliente){
             return ['exec'=>false,'mens'=>'Cliente não informado inválido','color'=>'danger'];
@@ -733,6 +737,7 @@ class ClienteController extends Controller
             $get_status = $config_cliente['status_contrato'];
             if($get_status=='Cancelado'){
                 $cancelar = $this->cancelar_contrato($id_cliente,$get_status,$autor);
+
                 // $ret['update_data_cancelamento'] = Qlib::usermeta_update($id_cliente,'update_data_cancelamento',$get_status);
                 // $dc = [
                 //     'data_cancelamento'=>date('Y-m-d H:i:s'),
@@ -778,7 +783,7 @@ class ClienteController extends Controller
     {
         //$id = $this->user;
         $dados = User::where('id',$id)->get();
-        $routa = 'users';
+        $routa = 'clientes';
         $this->authorize('ler', $this->url);
         //Verificar se foi encontrado o usuário
         if( $dados && count($dados) > 0){
@@ -810,7 +815,6 @@ class ClienteController extends Controller
                 'campos'=>$campos,
                 'exec'=>true,
             ];
-
             return view($routa.'.show',$ret);
         }else{
             $ret = [

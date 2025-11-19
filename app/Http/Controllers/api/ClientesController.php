@@ -398,7 +398,7 @@ class ClientesController extends Controller
             $token_contrato = Qlib::buscaValorDb0('contratos','id_cliente',$id,'token');
             $cc = new ContratoController;
             if($numOperacao){
-                $ret = $cc->cancelar($numOperacao);
+                $ret = $cc->cancelar($numOperacao,$token_contrato);
                 if(isset($ret['exec'])){
                     unset(
                         $ret['data']['valorPremio'],
@@ -424,9 +424,29 @@ class ClientesController extends Controller
                 // $ret['status'] = 400;
                 // $ret['mens'] = 'Erro ao tentar excluir';
             }
-            //coleta data de cancelamento e id do usuario que cancelou
+            // coleta data de cancelamento e id do usuario que cancelou
             $ret['cancelado_por'] = $user_id;
             $ret['data_cancelamento'] = date('Y-m-d H:i:s');
+
+            /**
+             * Registra evento de cancelamento do contrato.
+             * Português: Loga um evento do tipo 'cancelamento' associado ao contrato.
+             * English: Logs a 'cancelamento' event linked to the contract for audit/history.
+             */
+            try {
+                \App\Services\ContractEventLogger::logByToken(
+                    $token_contrato,
+                    'cancelamento',
+                    isset($ret['exec']) && $ret['exec'] ? 'Cancelamento confirmado' : 'Cancelamento solicitado',
+                    [
+                        'numeroOperacao' => $numOperacao ?? null,
+                        'response' => $ret,
+                    ],
+                    $user_id
+                );
+            } catch (\Throwable $th) {
+                // Silencia falha de log para não impactar o fluxo de cancelamento
+            }
             $ret['color'] = 'warning';
             $ret['status_req_cancelado'] = Qlib::update_usermeta($id,'status_req_cancelado',json_encode($ret));
         }else{
