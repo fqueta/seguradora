@@ -733,8 +733,11 @@ class ClienteController extends Controller
             //verificar qual é o status no cadastro do cliente na tabela de users e se for = 'Cancelado' registra data so cancelamento no meta campo usermeta['status_contrato']
             $config_cliente = Qlib::buscaValorDb0('users','id',$id_cliente,'config');
             $config_cliente = json_decode($config_cliente,true) ? Qlib::lib_json_array($config_cliente) : [];
-            // dd($config_cliente);
-            $get_status = $config_cliente['status_contrato'];
+            // Obtém status de forma segura; se não existir em config, usa meta
+            $get_status = $config_cliente['status_contrato'] ?? null;
+            if ($get_status === null) {
+                $get_status = $this->get_status_contrato($id_cliente);
+            }
             if($get_status=='Cancelado'){
                 $cancelar = $this->cancelar_contrato($id_cliente,$get_status,$autor);
 

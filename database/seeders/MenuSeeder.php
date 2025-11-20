@@ -62,6 +62,15 @@ class MenuSeeder extends Seeder
                 'pai'=>''
             ],
             [
+                'categoria'=>'RELATORIOS',
+                'description'=>'Contratos',
+                'icon'=>'fas fa-file-alt',
+                'actived'=>true,
+                'url'=>'usuarios-contratos',
+                'route'=>'',
+                'pai'=>''
+            ],
+            [
                 'categoria'=>'',
                 'description'=>'Páginas',
                 'icon'=>'fas fa-list',

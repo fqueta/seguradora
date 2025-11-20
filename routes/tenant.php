@@ -8,6 +8,7 @@ use App\Http\Controllers\admin\ConfigController;
 use App\Http\Controllers\admin\ContratoController;
 use App\Http\Controllers\admin\FinanceiroController;
 use App\Http\Controllers\admin\HomeController;
+use App\Http\Controllers\admin\RelatoriosContratosController;
 use App\Http\Controllers\admin\ImportController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\ClientesController;
@@ -180,6 +181,11 @@ Route::middleware([
             // Route::get('receitas', [FinanceiroController::class,'receitas'])->name('financeiro.receitas');
             Route::get('despesas', [FinanceiroController::class,'despesas'])->name('financeiro.despesas');
             Route::get('extrato', [FinanceiroController::class,'extrato'])->name('financeiro.extrato');
+        });
+
+        Route::prefix('relatorios')->group(function(){
+            Route::get('/usuarios-contratos', [RelatoriosContratosController::class, 'index'])->name('relatorios.usuarios_contratos.index');
+            Route::get('/usuarios-contratos/export', [RelatoriosContratosController::class, 'export'])->name('relatorios.usuarios_contratos.export');
         });
 
         Route::get('/test', [TesteController::class,'index']);
