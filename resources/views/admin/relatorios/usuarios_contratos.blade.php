@@ -118,4 +118,36 @@
 @section('css')
     @include('qlib.csslib')
 @stop
+@section('js')
+    @include('qlib.jslib')
+
+    <script>
+        $(function(){
+            $('[exportar-filter]').on('click',function(e){
+                e.preventDefault();
+                var urlAtual = window.location.href;
+                var d = urlAtual.split('?');
+                url = '';
+                if(d[1]){
+                    url = $(this).attr('href');
+                    url = url+'?'+d[1];
+                }
+                if(url)
+                    abrirjanelaPadrao(url);
+                    //window.open(url, "_blank", "toolbar=1, scrollbars=1, resizable=1, width=" + 1015 + ", height=" + 800);
+                //confirmDelete($(this));
+            });
+            $('[data-del="true"]').on('click',function(e){
+                e.preventDefault();
+                confirmDelete($(this));
+            });
+            $('[name="filter[cpf]"],[name="filter[cpf_conjuge]"]').inputmask('999.999.999-99');
+            $(' [order="true"] ').on('click',function(){
+                var val = $(this).val();
+                var url = lib_trataAddUrl('order',val);
+                window.location = url;
+            });
+        });
+    </script>
+  @stop
 
