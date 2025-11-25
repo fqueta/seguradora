@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Dashboard')
+@section('title', $titulo)
 
 @section('content_header')
     <h3>{{$titulo}}</h3>
@@ -61,13 +61,13 @@
       </div>
     </div>
   </div>
-  @stop
+@stop
 
-  @section('css')
+@section('css')
     @include('qlib.csslib')
-  @stop
+@stop
 
-  @section('js')
+@section('js')
     @include('qlib.jslib')
 
     <script>

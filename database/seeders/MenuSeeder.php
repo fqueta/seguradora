@@ -63,13 +63,23 @@ class MenuSeeder extends Seeder
             ],
             [
                 'categoria'=>'RELATORIOS',
-                'description'=>'Contratos',
-                'icon'=>'fas fa-file-alt',
+                'description'=>'Relatórios',
+                'icon'=>'fas fa-file-word',
                 'actived'=>true,
                 'url'=>'usuarios-contratos',
                 'route'=>'',
                 'pai'=>''
             ],
+            [
+                'categoria'=>'',
+                'description'=>'Todos Contratos',
+                'icon'=>'fas fa-file-alt',
+                'actived'=>true,
+                'url'=>'contratos',
+                'route'=>'relatorios.usuarios_contratos.index',
+                'pai'=>'usuarios-contratos'
+            ],
+
             [
                 'categoria'=>'',
                 'description'=>'Páginas',

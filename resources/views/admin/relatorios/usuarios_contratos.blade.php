@@ -4,7 +4,7 @@
 
 @section('content_header')
     <h1>Relatórios: Usuários com Contratos</h1>
-@endsection
+@stop
 
 @section('content')
     <div class="card">
@@ -15,7 +15,7 @@
                 <input type="hidden" name="adminlteSearch" value="{{ request('adminlteSearch') }}" />
                 <div class="col-md-3">
                     <label class="form-label">Campo do período</label>
-                    <select name="campo_periodo" class="form-select">
+                    <select name="campo_periodo" class="form-select form-control">
                         <option value="inicio" {{ (request('campo_periodo','inicio')=='inicio') ? 'selected' : '' }}>Data de início</option>
                         <option value="fim" {{ (request('campo_periodo')=='fim') ? 'selected' : '' }}>Data de fim</option>
                     </select>
@@ -30,7 +30,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Status do contrato</label>
-                    <select name="status" class="form-select">
+                    <select name="status" class="form-select form-control">
                         <option value="">Todos</option>
                         @if(!empty($statusOptions))
                             @foreach($statusOptions as $value => $nome)
@@ -39,7 +39,7 @@
                         @endif
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
+                <div class="col-md-3 d-flex align-items-end mt-2">
                     <a class="btn btn-outline-secondary me-2" href="{{ route('relatorios.usuarios_contratos.index') }}">Limpar</a>
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
                     <a class="btn btn-success" href="{{ route('relatorios.usuarios_contratos.export', [
@@ -113,4 +113,9 @@
             {{ $registros->links() }}
         </div>
     </div>
-@endsection
+@stop
+
+@section('css')
+    @include('qlib.csslib')
+@stop
+

@@ -57,20 +57,6 @@ Route::middleware([
     $prefixo_site = config('app.prefixo_site');
     Route::get('/', [App\Http\Controllers\site\SiteController::class, 'home'])->name('home');
     Route::get('/test', [App\Http\Controllers\site\SiteController::class, 'test_portal'])->name('teste.site');
-    Route::prefix($prefixo_site.'internautas')->group(function(){
-        Route::get('/',[App\Http\Controllers\portalController::class, 'index'])->name('internautas.index');
-        Route::get('/cadastrar/{tipo}',[portalController::class, 'cadInternautas'])->name('cad.internautas');
-        Route::post('/cadastrar',[portalController::class,'storeInternautas'])->name('internautas.store');
-        Route::get('/cadastrar/ac/{tipo}/{id}',[portalController::class,'acaoInternautas'])->name('internautas.acao.get');
-        Route::get('/login',[portalController::class,'loginInternautas'])->name('internautas.login');
-        Route::get('/quick-login',[portalController::class,'quick_login'])->name('internautas.quick_login');
-        Route::get('/logout',[portalController::class,'logoutInternautas'])->name('internautas.logout');
-        Route::get('/send-verific-user',[portalController::class,'send_verific_user'])->name('send_verific_user');
-        Route::resource('sic','\App\Http\Controllers\portal\sicController',['parameters' => [
-            'sic' => 'id'
-        ]])->middleware('auth');
-        Route::get('sics',[sicController::class,'relatorios'])->name('sic.internautas.relatorios');
-    });
 
     Route::prefix('/'.$prefixo_admin)->group(function(){
         Route::get('/', [HomeController::class,'index'])->name('home.admin');
@@ -131,12 +117,6 @@ Route::middleware([
         Route::resource('tags','\App\Http\Controllers\admin\TagsController',['parameters' => [
             'tags' => 'id'
         ]]);
-        //inicio Rotas módulo Sic
-        // Route::resource('sic','\App\Http\Controllers\admin\sicController',['as'=>'admin','parameters' => ['sic' => 'id']]);
-        // Route::get('sics/relatorios', ['\App\Http\Controllers\admin\sicController', 'relatorios'])->name('admin.sic.relatorios');
-        // Route::get('sics/config', ['\App\Http\Controllers\admin\sicController', 'config'])->name('admin.sic.config');
-        // Route::get('sics/config/{url}', ['\App\Http\Controllers\admin\sicController', 'config'])->name('admin.sic.config.edit');
-        //Fim Rotas módulo Sic
         Route::prefix('uploads')->group(function(){
             Route::get('/',[uploadController::class,'index'])->name('uploads.index');
             Route::get('/create',[UploadController::class,'create'])->name('uploads.create');
