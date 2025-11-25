@@ -48,6 +48,8 @@ class RelatoriosContratosController extends Controller
                 'contratos.fim as contrato_fim',
                 DB::raw("cancelmeta.meta_value AS cancelmeta"),
                 DB::raw("cancel_ev.cancel_at AS cancel_event_at"),
+                // Status atual (usermeta) para alinhar exibição e filtro
+                DB::raw("statusmeta.meta_value AS status_meta"),
             ])
             ->join('contratos', 'contratos.id_cliente', '=', 'users.id')
             // Join em subconsulta: última ocorrência de cancelamento por evento de status
@@ -108,11 +110,14 @@ class RelatoriosContratosController extends Controller
         $rows = $registros->getCollection()->map(function ($row) {
             // Nascimento pode estar em users.config (JSON) com chaves diferentes
             $nascimento = null;
-            $status = null;
+            // Prioriza status do meta (usermeta) e, se ausente, usa config
+            $status = $row->status_meta ?? null;
             if (!empty($row->config)) {
                 $cfg = is_array($row->config) ? $row->config : (json_decode($row->config, true) ?: []);
                 $nascimento = $cfg['dataNascimento'] ?? $cfg['nascimento'] ?? $cfg['data_nasci'] ?? null;
-                $status = $cfg['status_contrato'] ?? null;
+                if ($status === null) {
+                    $status = $cfg['status_contrato'] ?? null;
+                }
             }
 
             // Data de cancelamento: preferir última ocorrência em contract_events

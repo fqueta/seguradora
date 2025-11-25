@@ -49,6 +49,8 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
                 'contratos.fim as contrato_fim',
                 DB::raw("cancelmeta.meta_value AS cancelmeta"),
                 DB::raw("cancel_ev.cancel_at AS cancel_event_at"),
+                // Inclui status atual via usermeta para manter consistência com filtros
+                DB::raw("statusmeta.meta_value AS status_meta"),
             ])
             ->join('contratos', 'contratos.id_cliente', '=', 'users.id')
             // Join em subconsulta: última ocorrência de cancelamento por evento de status
@@ -105,11 +107,14 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
 
         return $dados->map(function ($row) {
             $nascimento = null;
-            $status = null;
+            // Prioriza status do meta (usermeta); se ausente, usa o config
+            $status = $row->status_meta ?? null;
             if (!empty($row->config)) {
                 $cfg = is_array($row->config) ? $row->config : (json_decode($row->config, true) ?: []);
                 $nascimento = $cfg['dataNascimento'] ?? $cfg['nascimento'] ?? $cfg['data_nasci'] ?? null;
-                $status = $cfg['status_contrato'] ?? null;
+                if ($status === null) {
+                    $status = $cfg['status_contrato'] ?? null;
+                }
             }
 
             // Data de cancelamento: preferir última ocorrência em contract_events
