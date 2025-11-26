@@ -28,6 +28,7 @@ class RelatoriosContratosController extends Controller
         $inicio = $request->get('periodo_inicio');
         $fim = $request->get('periodo_fim');
         $status = $request->get('status');
+        $autor = $request->get('autor');
         // Captura busca livre do topo (AdminLTE) ou parâmetro genérico
         $search = $request->get('adminlteSearch', $request->get('search'));
 
@@ -46,12 +47,15 @@ class RelatoriosContratosController extends Controller
                 'users.config',
                 'contratos.inicio as contrato_inicio',
                 'contratos.fim as contrato_fim',
+                DB::raw('autor.name AS autor_name'),
                 DB::raw("cancelmeta.meta_value AS cancelmeta"),
                 DB::raw("cancel_ev.cancel_at AS cancel_event_at"),
                 // Status atual (usermeta) para alinhar exibição e filtro
                 DB::raw("statusmeta.meta_value AS status_meta"),
             ])
             ->join('contratos', 'contratos.id_cliente', '=', 'users.id')
+            // Traz o nome do autor do contrato
+            ->leftJoin('users as autor', 'autor.id', '=', 'contratos.autor')
             // Join em subconsulta: última ocorrência de cancelamento por evento de status
             ->leftJoin(DB::raw('(
                 SELECT contrato_id, MAX(created_at) AS cancel_at
@@ -68,7 +72,10 @@ class RelatoriosContratosController extends Controller
             ->leftJoin('usermeta as statusmeta', function ($join) {
                 $join->on('statusmeta.user_id', '=', 'users.id')
                      ->where('statusmeta.meta_key', '=', 'status_contrato');
-            });
+            })
+            // Restringe aos clientes (id_permission > 4)
+            // Nota: no sistema, clientes possuem permissão >= 5
+            ->where('users.id_permission', '>', 4);
 
         // Aplica filtro de período conforme campo escolhido
         if ($inicio && $fim) {
@@ -94,6 +101,10 @@ class RelatoriosContratosController extends Controller
         // Filtro por status de contrato, quando selecionado
         if (!empty($status)) {
             $query->where('statusmeta.meta_value', '=', $status);
+        }
+        // Filtro por autor do contrato, quando selecionado
+        if (!empty($autor)) {
+            $query->where('contratos.autor', '=', $autor);
         }
 
         // Filtro de busca livre: nome ou CPF
@@ -130,10 +141,12 @@ class RelatoriosContratosController extends Controller
             }
 
             return [
+                'id' => $row->id,
                 'contrato_inicio' => $this->formatDateBr($row->contrato_inicio),
                 'contrato_fim' => $this->formatDateBr($row->contrato_fim),
                 'data_cancelamento' => $this->formatDateBr($cancelamento),
                 'nome' => $row->name,
+                'autor' => $row->autor_name,
                 'cpf' => $row->cpf,
                 'nascimento' => $this->formatDateBr($nascimento),
                 'status' => $status,
@@ -143,6 +156,23 @@ class RelatoriosContratosController extends Controller
         // Substitui a collection mapeada para exibição, preservando a paginação
         $registros->setCollection(collect($rows));
 
+        /**
+         * Opções de autores (contratos.autor) para o select, incluindo contagem de contratos
+         * apenas para clientes (users.id_permission > 4). Isso ajuda o usuário a escolher
+         * autores mais relevantes.
+         */
+        $authorsOptions = DB::table('users as u')
+            ->join('contratos as c', 'c.autor', '=', 'u.id')
+            ->join('users as cli', 'c.id_cliente', '=', 'cli.id')
+            ->where('cli.id_permission', '>', 4)
+            ->select('u.id', 'u.name', DB::raw('COUNT(c.id) as total'))
+            ->groupBy('u.id', 'u.name')
+            ->orderBy('u.name', 'asc')
+            ->get()
+            ->mapWithKeys(function($row){
+                return [ $row->id => $row->name . ' (' . $row->total . ')' ];
+            });
+
         return view('admin.relatorios.usuarios_contratos', [
             'registros' => $registros,
             'filtros' => [
@@ -151,8 +181,10 @@ class RelatoriosContratosController extends Controller
                 'periodo_fim' => $fim,
                 'status' => $status,
                 'search' => $search,
+                'autor' => $autor,
             ],
             'statusOptions' => $statusOptions,
+            'authorsOptions' => $authorsOptions,
         ]);
     }
 
@@ -167,8 +199,10 @@ class RelatoriosContratosController extends Controller
         $fim = $request->get('periodo_fim');
         $status = $request->get('status');
         $search = $request->get('adminlteSearch', $request->get('search'));
+        $autor = $request->get('autor');
 
-        $export = new UsuariosContratosExport($campoPeriodo, $inicio, $fim, $status, $search);
+        // Propaga o filtro de autor e mantém restrição de permissões no export
+        $export = new UsuariosContratosExport($campoPeriodo, $inicio, $fim, $status, $search, $autor);
         $nome = 'usuarios_contratos_' . date('Ymd_His') . '.xlsx';
         return Excel::download($export, $nome);
     }

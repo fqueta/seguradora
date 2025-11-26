@@ -16,6 +16,7 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
     protected ?string $fim;
     protected ?string $status;
     protected ?string $search;
+    protected ?string $autor;
 
     /**
      * Construtor do export mantendo filtros.
@@ -25,13 +26,22 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
      * Construtor que recebe filtros do relatório.
      * Constructor receiving report filters.
      */
-    public function __construct(string $campoPeriodo = 'inicio', ?string $inicio = null, ?string $fim = null, ?string $status = null, ?string $search = null)
+    /**
+     * @param string $campoPeriodo Campo base para filtro de período (inicio|fim)
+     * @param ?string $inicio Data inicial (YYYY-MM-DD)
+     * @param ?string $fim Data final (YYYY-MM-DD)
+     * @param ?string $status Status do contrato
+     * @param ?string $search Busca livre (nome/CPF)
+     * @param ?string $autor ID do autor do contrato (users.id)
+     */
+    public function __construct(string $campoPeriodo = 'inicio', ?string $inicio = null, ?string $fim = null, ?string $status = null, ?string $search = null, ?string $autor = null)
     {
         $this->campoPeriodo = $campoPeriodo ?: 'inicio';
         $this->inicio = $inicio;
         $this->fim = $fim;
         $this->status = $status;
         $this->search = $search;
+        $this->autor = $autor;
     }
 
     /**
@@ -47,12 +57,17 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
                 'users.config',
                 'contratos.inicio as contrato_inicio',
                 'contratos.fim as contrato_fim',
+                DB::raw('autor.name AS autor_name'),
                 DB::raw("cancelmeta.meta_value AS cancelmeta"),
                 DB::raw("cancel_ev.cancel_at AS cancel_event_at"),
                 // Inclui status atual via usermeta para manter consistência com filtros
                 DB::raw("statusmeta.meta_value AS status_meta"),
             ])
             ->join('contratos', 'contratos.id_cliente', '=', 'users.id')
+            // Restringe aos clientes (id_permission > 4)
+            ->where('users.id_permission', '>', 4)
+            // Traz o nome do autor
+            ->leftJoin('users as autor', 'autor.id', '=', 'contratos.autor')
             // Join em subconsulta: última ocorrência de cancelamento por evento de status
             ->leftJoin(DB::raw('(
                 SELECT contrato_id, MAX(created_at) AS cancel_at
@@ -95,6 +110,11 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
             $query->where('statusmeta.meta_value', '=', $this->status);
         }
 
+        // Filtro por autor do contrato
+        if (!empty($this->autor)) {
+            $query->where('contratos.autor', '=', $this->autor);
+        }
+
         // Busca livre: nome ou CPF
         if (!empty($this->search)) {
             $query->where(function ($q) {
@@ -131,6 +151,7 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
                 'Data de Fim' => $this->formatDateBr($row->contrato_fim),
                 'Data de cancelamento' => $this->formatDateBr($cancelamento),
                 'Nome' => $row->name,
+                'Autor' => $row->autor_name,
                 'CPF' => $row->cpf,
                 'Data de Nascimento' => $this->formatDateBr($nascimento),
                 'Status' => $status,
@@ -149,6 +170,7 @@ class UsuariosContratosExport implements FromCollection, WithHeadings, ShouldAut
             'Data de Fim',
             'Data de cancelamento',
             'Nome',
+            'Autor',
             'CPF',
             'Data de Nascimento',
             'Status',

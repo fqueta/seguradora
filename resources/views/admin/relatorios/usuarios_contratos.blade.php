@@ -39,8 +39,18 @@
                         @endif
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Autor do contrato</label>
+                    <select name="autor" class="form-select form-control">
+                        <option value="">Todos</option>
+                        @if(!empty($authorsOptions))
+                            @foreach($authorsOptions as $id => $nome)
+                                <option value="{{ $id }}" {{ (request('autor')==$id) ? 'selected' : '' }}>{{ $nome }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
                 <div class="col-md-3 d-flex align-items-end mt-2">
-                    <a class="btn btn-outline-secondary me-2" href="{{ route('relatorios.usuarios_contratos.index') }}">Limpar</a>
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
                     <a class="btn btn-success" href="{{ route('relatorios.usuarios_contratos.export', [
                         'campo_periodo'=>request('campo_periodo','inicio'),
@@ -48,7 +58,9 @@
                         'periodo_fim'=>request('periodo_fim'),
                         'status'=>request('status'),
                         'adminlteSearch'=>request('adminlteSearch'),
+                        'autor'=>request('autor'),
                     ]) }}">Exportar Excel</a>
+                    <a class="btn btn-outline-secondary me-2" href="{{ route('relatorios.usuarios_contratos.index') }}">Limpar</a>
                 </div>
             </form>
         </div>
@@ -66,8 +78,9 @@
                     <tr>
                         <th>Data de inicio</th>
                         <th>Data de Fim</th>
-                        <th>Data de cancelamento</th>
+                        <th>Cancelamento</th>
                         <th>Nome</th>
+                        <th>Autor</th>
                         <th>CPF</th>
                         <th>Data de Nascimento</th>
                         <th>Status</th>
@@ -79,7 +92,12 @@
                             <td>{{ $item['contrato_inicio'] }}</td>
                             <td>{{ $item['contrato_fim'] }}</td>
                             <td>{{ $item['data_cancelamento'] ?? '' }}</td>
-                            <td>{{ $item['nome'] }}</td>
+                            <td>
+                                <a class="nome-link" href="{{ route('clientes.show', ['id' => $item['id'] ?? null]) }}?redirect={{ urlencode(url()->full()) }}">
+                                    {{ $item['nome'] }}
+                                </a>
+                            </td>
+                            <td>{{ $item['autor'] ?? '' }}</td>
                             <td>{{ $item['cpf'] }}</td>
                             <td>{{ $item['nascimento'] ?? '' }}</td>
                             <td>
@@ -117,6 +135,10 @@
 
 @section('css')
     @include('qlib.csslib')
+    <style>
+        /* Sublinha o nome para destacar que é um link */
+        .nome-link { text-decoration: underline; }
+    </style>
 @stop
 @section('js')
     @include('qlib.jslib')
