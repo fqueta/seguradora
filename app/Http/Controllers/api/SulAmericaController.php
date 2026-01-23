@@ -140,6 +140,7 @@ class SulAmericaController extends Controller
             'Início do processamento do método contratacao (SulAmérica)',
             [
                 'payload' => $payload,
+                'xml' => $xml,
                 'request' => [
                     'produto' => $produto,
                     'canalVenda' => $canalVenda,
