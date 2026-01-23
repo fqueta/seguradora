@@ -165,12 +165,13 @@ class SulAmericaController extends Controller
             'SOAPAction' => '',
         ])->withBody($xml, 'text/xml')->post($this->url);
 
-        $ret['url'] = $this->url;
         $resposta = $response->body();
         // $ret['requsição'] = $xml;
         // $ret['passwordDigest'] = $passwordDigest;
         $ret['body'] = $resposta;
         $ret = $this->xmlContrata_to_array($resposta,$config);
+        $ret['url'] = $this->url;
+
         // Log de término da contratação (end)
         ContractEventLogger::logByToken(
             $operacaoParceiro,
