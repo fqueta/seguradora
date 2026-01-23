@@ -62,12 +62,10 @@ Route::middleware([
         Route::get('/', [HomeController::class,'index'])->name('home.admin');
         Route::prefix('users')->group(function(){
             Route::get('/',[UserController::class,'index'])->name('users.index');
-
             Route::get('/ajax',[UserController::class,'paginacaoAjax'])->name('users.ajax');
             Route::get('/lista.ajax',function(){
                 return view('users.index_ajax');
             });
-
             Route::get('/create',[UserController::class,'create'])->name('users.create');
             Route::post('/',[UserController::class,'store'])->name('users.store');
             Route::get('/{id}/show',[UserController::class,'show'])->where('id', '[0-9]+')->name('users.show');
@@ -196,12 +194,18 @@ Route::middleware([
         Route::resource('/convenios', '\App\Http\Controllers\admin\PostsController',['parameters' => [
             'convenios' => 'id'
         ]]);
+        // Products CRUD using PostsController with post_type='products'
+        // EN: Resource route for products management mapped to PostsController.
+        // PT-BR: Rota resource para gerenciamento de produtos mapeada ao PostsController.
+        Route::resource('/products', '\App\Http\Controllers\admin\PostsController',['parameters' => [
+            'products' => 'id'
+        ]]);
         Route::resource('/clientes', '\App\Http\Controllers\admin\ClienteController',['parameters' => [
             'clientes' => 'id'
         ]]);
         Route::get('/clientes/importar',[ImportController ::class,'form_import'])->name('clientes.import');
         Route::post('/clientes/importar',[ClienteController::class,'importar'])->name('clientes.post_import');
-        Route::resource('/contratos', '\App\Http\Controllers\admin\PostsController',['parameters' => [
+        Route::resource('/contratos', '\App\\Http\\Controllers\\admin\\ContratoController',[ 'parameters' => [
             'contratos' => 'id'
         ]]);
         // Histórico de eventos por contrato (timeline)
@@ -222,7 +226,6 @@ Route::middleware([
         Route::get('/config',[EtapaController::class,'config'])->name('sistema.config');
         // Route::post('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('sistema.update-ajax');
         Route::post('/import', [ImportController::class, 'import'])->name('import');
-
     });
 
     Route::get('/suspenso',[UserController::class,'suspenso'])->name('cobranca.suspenso');
@@ -230,9 +233,6 @@ Route::middleware([
         Route::get('/pefil',[UserController::class,'perfilShow'])->name('sistema.perfil');
         Route::get('/perfil/edit',[UserController::class,'perfilEdit'])->name('sistema.perfil.edit');
         Route::post('/perfil/store',[UserController::class,'perfilStore'])->name('sistema.perfil.store');
-        // Route::post('/perfil/index',[UserController::class,'perfilIndex'])->name('perfil.index');
-        // Route::get('/config',[EtapaController::class,'config'])->name('sistema.config');
-        // Route::post('/{id}',[EtapaController::class,'update'])->where('id', '[0-9]+')->name('sistema.update-ajax');
     });
     // Route::prefix('preview')->group(function(){
     //     Route::get('/posts/{id}',[PreviewController::class,'posts'])->name('preview.posts');

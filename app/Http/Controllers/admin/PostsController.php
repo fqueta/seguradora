@@ -56,6 +56,11 @@ class PostsController extends Controller
         }elseif($this->sec=='pages'){
             $this->label = 'Páginas';
 
+        }elseif($this->sec=='products'){
+            // EN: Label for Products section to show proper titles in UI.
+            // PT-BR: Rótulo para a seção Produtos para exibir títulos corretos na UI.
+            $this->label = 'Produtos';
+
         }
         if($this->sec=='pages' || $this->sec=='posts'){
             $this->view = 'posts';
@@ -192,6 +197,52 @@ class PostsController extends Controller
                 $ret['guid']['arr_opc'] = Qlib::sql_array("SELECT ID,post_title FROM posts WHERE post_status='publish' AND post_type='".$this->post_type."'",'post_title','ID');
             }elseif($this->post_type =='tipo_receitas' || $this->post_type =='tipo_despesas'){
                 $ret['guid']['arr_opc'] = Qlib::sql_array("SELECT ID,post_title FROM posts WHERE post_status='publish' AND post_type='".$this->post_type."'",'post_title','ID');
+            }elseif($this->post_type=='products'){
+                /**
+                 * EN: Products fields (CRUD) using posts table with post_type='products'.
+                 *     Includes: Product Name, Cost Price, Sale Price, Description, Plan.
+                 * PT-BR: Campos de Produtos (CRUD) usando a tabela posts com post_type='products'.
+                 *        Inclui: Nome do produto, Preço de custo, Preço de venda, Descrição, Plano.
+                 */
+                if(isset($ret['post_title'])){
+                    $ret['post_title']['label'] = 'Nome do produto';
+                }
+                if(isset($ret['post_excerpt'])){
+                    $ret['post_excerpt']['label'] = 'Descrição';
+                }
+                // Cost price (saved in config JSON)
+                $ret['config[price_cost]'] = [
+                    'label'=>'Preço de custo',
+                    'active'=>true,
+                    'type'=>'moeda',
+                    'tam'=>'6',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][price_cost',
+                    'placeholder'=>'Ex.: 199.90',
+                ];
+                // Sale price (saved in config JSON)
+                $ret['config[price_sale]'] = [
+                    'label'=>'Preço de venda',
+                    'active'=>true,
+                    'type'=>'moeda',
+                    'tam'=>'6',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][price_sale',
+                    'placeholder'=>'Ex.: 249.90',
+                ];
+                // Plan (saved in config JSON)
+                $ret['config[plan]'] = [
+                    'label'=>'Plano',
+                    'active'=>true,
+                    'type'=>'select',
+                    'tam'=>'12',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][plan',
+                    'arr_opc'=>[
+                        '1'=>'Plano 1','2'=>'Plano 2','3'=>'Plano 3','4'=>'Plano 4','5'=>'Plano 5','6'=>'Plano 6','7'=>'Plano 7','8'=>'Plano 8','9'=>'Plano 9'
+                    ],
+                    'label_option_select'=>'Selecione',
+                ];
             }
         }else{
             $ret = [
@@ -204,7 +255,7 @@ class PostsController extends Controller
                 'post_excerpt'=>['label'=>'Resumo (Opcional)','active'=>true,'placeholder'=>'Uma síntese do um post','type'=>'textarea','exibe_busca'=>'d-block','event'=>'','tam'=>'12'],
                 // 'ativo'=>['label'=>'Liberar','active'=>true,'type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'3','arr_opc'=>['s'=>'Sim','n'=>'Não']],
                 'post_content'=>['label'=>'Conteudo','active'=>false,'type'=>'textarea','exibe_busca'=>'d-block','event'=>$hidden_editor,'tam'=>'12','class_div'=>'','class'=>'summernote','placeholder'=>__('Escreva seu conteúdo aqui..')],
-                'post_status'=>['label'=>'Publicar','active'=>true,'type'=>'chave_checkbox','value'=>'publish','valor_padrao'=>'publish','exibe_busca'=>'d-block','event'=>'','tam'=>'6','arr_opc'=>['publish'=>'Publicado','pending'=>'Pendente'],'tab'=>'posts'],
+                'post_status'=>['label'=>'Publicar','active'=>true,'type'=>'chave_checkbox','value'=>'publish','valor_padrao'=>'publish','exibe_busca'=>'d-block','event'=>'','tam'=>'12','arr_opc'=>['publish'=>'Publicado','pending'=>'Pendente'],'tab'=>'posts'],
             ];
             if($this->post_type=='posts'){
                 if($this->ac=='alt'){
@@ -213,6 +264,50 @@ class PostsController extends Controller
                 }
                 $ret['config[capa_artigo]']=['label'=>'Capa no artigo','cp_busca'=>'config][capa_artigo','active'=>false,'','type'=>'chave_checkbox','value'=>'s','valor_padrao'=>'s','exibe_busca'=>'d-block','event'=>'','tam'=>'6','arr_opc'=>['s'=>'Sim','n'=>'Não'],'title'=>'Função para exibir imagem de capa dentro do artigo.'];
                 // $ret['post_name']['type'] = 'text';
+            }elseif($this->post_type=='products'){
+                /**
+                 * EN: Default fields for products when Documento config is absent.
+                 * PT-BR: Campos padrão para produtos quando Documento config não existe.
+                 */
+                $ret['post_title']['label'] = 'Nome do produto';
+                $ret['post_excerpt']['label'] = 'Descrição';
+                $ret['config[price_cost]'] = [
+                    'label'=>'Preço de custo',
+                    'active'=>true,
+                    'type'=>'moeda',
+                    'tam'=>'6',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][price_cost',
+                    'placeholder'=>'Ex.: 199.90',
+                ];
+                $ret['config[price_sale]'] = [
+                    'label'=>'Preço de venda',
+                    'active'=>true,
+                    'type'=>'moeda',
+                    'tam'=>'6',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][price_sale',
+                    'placeholder'=>'Ex.: 249.90',
+                ];
+                $ret['config[plan]'] = [
+                    'label'=>'Plano',
+                    'active'=>true,
+                    'type'=>'select',
+                    'tam'=>'12',
+                    'exibe_busca'=>'d-block',
+                    'cp_busca'=>'config][plan',
+                    'arr_opc'=>[
+                        '1'=>'Plano 1','2'=>'Plano 2','3'=>'Plano 3','4'=>'Plano 4','5'=>'Plano 5','6'=>'Plano 6','7'=>'Plano 7','8'=>'Plano 8','9'=>'Plano 9'
+                    ],
+                    'label_option_select'=>'Selecione',
+                ];
+                $status = $ret['post_status'];
+                unset($ret['post_content'],$ret['post_status']);
+                $ret['post_status'] = $status;
+                //enviar o elemento post_status para o ultimo a ultima pssição do array
+
+
+
             }
         }
         // dump($ret);
@@ -488,7 +583,9 @@ class PostsController extends Controller
             // }
             $d_pagina = $this->pagina();
             if(!$d_pagina){
-                if($this->sec=='posts' || $this->sec=='pages'){
+                if($this->sec=='posts' || $this->sec=='pages' || $this->sec=='products'){
+                    // EN: Use label to build title when Documento config is absent.
+                    // PT-BR: Usa o rótulo para montar o título quando não existe Documento config.
                     $title = 'Cadastro de '.$this->label;
                 }else{
                     $title = __('Sem titulo');

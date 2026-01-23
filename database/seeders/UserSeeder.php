@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class UserSeeder extends Seeder
 {
@@ -43,8 +44,10 @@ class UserSeeder extends Seeder
             //     'id_permission' => '5',
             // ],
         ];
+        Schema::disableForeignKeyConstraints();
         User::truncate();
         Contrato::truncate();
+        Schema::enableForeignKeyConstraints();
         foreach ($arr as $key => $value) {
             User::create($value);
         }

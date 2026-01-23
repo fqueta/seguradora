@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Prefeituras extends Model
 {
     use HasFactory;
+    protected $table = 'tenants';
+    protected $fillable = ['id','name','config','ativo','excluido','deletado','autor'];
 }

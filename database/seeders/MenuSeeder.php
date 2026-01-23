@@ -43,6 +43,16 @@ class MenuSeeder extends Seeder
                 'route'=>'clientes.index',
                 'pai'=>'cad-clientes'
             ],
+            //contratos
+            [
+                'categoria'=>'',
+                'description'=>'Contratos',
+                'icon'=>'fas fa-file-alt',
+                'actived'=>true,
+                'url'=>'cad-contratos',
+                'route'=>'contratos.index',
+                'pai'=>'cad-clientes'
+            ],
             [
                 'categoria'=>'',
                 'description'=>'Importar Clientes',
@@ -51,6 +61,24 @@ class MenuSeeder extends Seeder
                 'url'=>'import_clientes',
                 'route'=>'clientes.import',
                 'pai'=>'cad-clientes'
+            ],
+            [
+                'categoria'=>'',
+                'description'=>'Produtos',
+                'icon'=>'fas fa-box',
+                'actived'=>true,
+                'url'=>'cad-produtos',
+                'route'=>'',
+                'pai'=>''
+            ],
+            [
+                'categoria'=>'',
+                'description'=>'Todos Produtos',
+                'icon'=>'fas fa-box',
+                'actived'=>true,
+                'url'=>'products',
+                'route'=>'products.index',
+                'pai'=>'cad-produtos'
             ],
             [
                 'categoria'=>'SITE',

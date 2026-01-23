@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Prefeituras;
 use App\Qlib\Qlib;
-use App\Tenant\Tenant;
+use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 

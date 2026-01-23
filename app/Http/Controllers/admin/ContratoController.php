@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Qlib\Qlib;
 use Illuminate\Http\Request;
 use App\Services\ContractEventLogger;
+use Illuminate\Support\Facades\Auth;
+use stdClass;
 
 class ContratoController extends Controller
 {
@@ -21,8 +23,19 @@ class ContratoController extends Controller
     public $campo_meta3;
     public $campo_meta4;
     public $campo_meta5;
+    protected $user;
+    public $routa;
+    public $label;
+    public $view;
+    public $tab;
     public function __construct()
     {
+        $this->middleware('auth');
+        $this->user = Auth::user();
+        $this->routa = 'contratos';
+        $this->label = 'Contratos';
+        $this->view = 'admin.padrao';
+        $this->tab = 'contratos';
         $this->campo_meta1 = 'contrato';
         $this->campo_meta2 = 'numOperacao';
         $this->campo_meta3 = 'status_contrato';
@@ -50,8 +63,9 @@ class ContratoController extends Controller
             if(!empty($dcc['config_contrato'])){
                 $dcc['config_contrato'] = Qlib::lib_json_array($dcc['config_contrato']);
             }
+            // dd($dcc);
             $integracao = [
-                'planoProduto'=>@$dcc['id_plano'] ? $dcc['id_plano'] : Qlib::qoption('planoPadrao'),
+                'planoProduto'=>Qlib::qoption('planoPadrao')? Qlib::qoption('planoPadrao') : @$dcc['id_plano'],
                 'operacaoParceiro'=>$token,
                 'produto'=>isset($dcc['config']['id_produto']) ? $dcc['config']['id_produto'] : '',
                 'nomeSegurado'=>$dcc['name'],
@@ -342,56 +356,319 @@ class ContratoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    /**
+     * Campos do formulário e da listagem de contratos.
+     * PT-BR: Define os campos do CRUD de contratos.
+     * EN: Defines the Contracts CRUD fields.
+     */
+    public function campos($id = null)
     {
-        //
+        $labelCliente = 'Cliente';
+        $labelProduto = 'Produto';
+        return [
+            'id' => ['label' => 'Id', 'active' => true, 'js' => true, 'type' => 'hidden', 'exibe_busca' => 'd-block', 'event' => '', 'tam' => '2'],
+            'autor' => ['label' => 'autor', 'active' => true, 'js' => true, 'type' => 'hidden', 'exibe_busca' => 'd-block', 'event' => '', 'tam' => '2'],
+            'token' => ['label' => 'token', 'active' => false, 'type' => 'hidden', 'exibe_busca' => 'd-block', 'event' => '', 'tam' => '2'],
+            'id_cliente' => [
+                'label' => $labelCliente,
+                'active' => true,
+                'type' => 'select',
+                'arr_opc' => Qlib::sql_array("SELECT id,name FROM users WHERE ativo='s'", 'name', 'id'),
+                'exibe_busca' => 'd-block',
+                'event' => 'required',
+                'tam' => '6',
+                'label_option_select' => 'Selecione',
+            ],
+            'id_produto' => [
+                'label' => $labelProduto,
+                'active' => true,
+                'type' => 'select',
+                'arr_opc' => Qlib::sql_array("SELECT ID,post_title FROM posts WHERE post_type='products'", 'post_title', 'ID'),
+                'exibe_busca' => 'd-block',
+                'event' => 'required',
+                'tam' => '6',
+                'label_option_select' => 'Selecione',
+            ],
+            'id_plano' => [
+                'label' => 'Plano',
+                'active' => true,
+                'type' => 'select',
+                'arr_opc' => [
+                    '1' => '1', '2' => '2', '3' => '3', '4' => '4', '5' => '5',
+                    '6' => '6', '7' => '7', '8' => '8', '9' => '9'
+                ],
+                'exibe_busca' => 'd-block',
+                'event' => 'required',
+                'tam' => '4',
+                'label_option_select' => 'Selecione',
+            ],
+            'inicio' => ['label' => 'Início', 'active' => true, 'type' => 'date', 'exibe_busca' => 'd-block', 'event' => 'required', 'tam' => '4'],
+            'fim' => ['label' => 'Fim', 'active' => true, 'type' => 'date', 'exibe_busca' => 'd-block', 'event' => 'required', 'tam' => '4'],
+            'config[premioSeguro]' => ['label' => 'Prêmio do Seguro', 'active' => true, 'type' => 'moeda', 'exibe_busca' => 'd-block', 'event' => '', 'tam' => '4', 'placeholder' => 'Ex.: 199,90'],
+            'ativo' => ['label' => 'Ativado', 'tab' => $this->tab, 'active' => true, 'type' => 'chave_checkbox', 'value' => 's', 'valor_padrao' => 's', 'exibe_busca' => 'd-block', 'event' => '', 'tam' => '3', 'arr_opc' => ['s' => 'Sim', 'n' => 'Não']],
+        ];
+    }
+
+    /**
+     * Consulta e paginação da listagem de contratos.
+     */
+    public function queryContratos($get = false)
+    {
+        $ret = false;
+        $get = isset($_GET) ? $_GET : [];
+        $ano = date('Y');
+        $mes = date('m');
+        $config = [
+            'limit' => isset($get['limit']) ? $get['limit'] : 50,
+            'order' => isset($get['order']) ? $get['order'] : 'desc',
+        ];
+
+        $contratos = Contrato::where('excluido', '=', 'n')->where('deletado', '=', 'n')->orderBy('id', $config['order']);
+
+        $campos = $this->campos();
+        $tituloTabela = 'Lista de contratos';
+        $arr_titulo = false;
+        if (isset($get['filter'])) {
+            $titulo_tab = false;
+            foreach ($get['filter'] as $key => $value) {
+                if (!empty($value)) {
+                    if ($key == 'id') {
+                        $contratos->where($key, 'LIKE', $value);
+                        $titulo_tab .= 'Todos com *' . $campos[$key]['label'] . '% = ' . $value . '& ';
+                        $arr_titulo[$campos[$key]['label']] = $value;
+                    } else {
+                        $contratos->where($key, 'LIKE', '%' . $value . '%');
+                        if (isset($campos[$key]['type']) && $campos[$key]['type'] == 'select' && isset($campos[$key]['arr_opc'][$value])) {
+                            $value = $campos[$key]['arr_opc'][$value];
+                        }
+                        $arr_titulo[$campos[$key]['label']] = $value;
+                        $titulo_tab .= 'Todos com *' . $campos[$key]['label'] . '% = ' . $value . '& ';
+                    }
+                }
+            }
+            if ($titulo_tab) {
+                $tituloTabela = 'Lista de: &' . $titulo_tab;
+            }
+        }
+        $registros = clone $contratos;
+        $ativos = clone $contratos;
+        $inativos = clone $contratos;
+        $novos = clone $contratos;
+        if ($config['limit'] == 'todos') {
+            $contratos = $contratos->get();
+        } else {
+            $contratos = $contratos->paginate($config['limit']);
+        }
+        $totais = new stdClass;
+        $totais->todos = $registros->count();
+        $totais->esteMes = $novos->whereYear('created_at', '=', $ano)->whereMonth('created_at', '=', $mes)->count();
+        $totais->ativos = $ativos->where('ativo', '=', 's')->count();
+        $totais->inativos = $inativos->where('ativo', '=', 'n')->count();
+
+        $ret['contratos'] = $contratos;
+        $ret['totais'] = $totais;
+        $ret['arr_titulo'] = $arr_titulo;
+        $ret['campos'] = $campos;
+        $ret['config'] = $config;
+        $ret['tituloTabela'] = $tituloTabela;
+        $ret['config']['resumo'] = [
+            'todos_registro' => ['label' => 'Todos cadastros', 'value' => $totais->todos, 'icon' => 'fas fa-calendar'],
+            'todos_mes' => ['label' => 'Cadastros recentes', 'value' => $totais->esteMes, 'icon' => 'fas fa-calendar-times'],
+            'todos_ativos' => ['label' => 'Cadastros ativos', 'value' => $totais->ativos, 'icon' => 'fas fa-check'],
+            'todos_inativos' => ['label' => 'Cadastros inativos', 'value' => $totais->inativos, 'icon' => 'fas fa-archive'],
+        ];
+        return $ret;
+    }
+
+    /**
+     * Listagem de contratos.
+     */
+    public function index(Request $request)
+    {
+        $this->authorize('ler', $this->routa);
+        $title = __('Cadastro de contratos');
+        $titulo = $title;
+        $query = $this->queryContratos($_GET);
+        $query['config']['exibe'] = 'html';
+        $routa = $this->routa;
+        return view($this->view . '.index', [
+            'dados' => $query['contratos'],
+            'title' => $title,
+            'titulo' => $titulo,
+            'campos_tabela' => $query['campos'],
+            'escolaridade_totais' => $query['totais'],
+            'titulo_tabela' => $query['tituloTabela'],
+            'arr_titulo' => $query['arr_titulo'],
+            'config' => $query['config'],
+            'routa' => $routa,
+            'view' => $this->view,
+            'i' => 0,
+        ]);
     }
 
     /**
      * Show the form for creating a new resource.
      */
+    /**
+     * Tela de criação de contrato.
+     */
     public function create()
     {
-        //
+        $this->authorize('create', $this->routa);
+        $title = __('Cadastrar contrato');
+        $titulo = $title;
+        $config = [
+            'ac' => 'cad',
+            'frm_id' => 'frm-contratos',
+            'route' => $this->routa,
+        ];
+        $value = [
+            'token' => uniqid(),
+            'autor' => Auth::id(),
+            'ativo' => 's',
+        ];
+        $campos = $this->campos();
+        return view($this->view . '.createedit', [
+            'config' => $config,
+            'title' => $title,
+            'titulo' => $titulo,
+            'campos' => $campos,
+            'value' => $value,
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
+    /**
+     * Persistência de um novo contrato.
+     */
     public function store(Request $request)
     {
-        //
+        $this->authorize('create', $this->routa);
+        $validatedData = $request->validate([
+            'id_cliente' => ['required'],
+            'id_produto' => ['required'],
+            'id_plano' => ['required'],
+            'inicio' => ['required', 'date'],
+            'fim' => ['required', 'date'],
+            'ativo' => ['nullable', 'in:s,n'],
+        ]);
+        $dados = $request->all();
+        $ajax = isset($dados['ajax']) ? $dados['ajax'] : 'n';
+        $dados['ativo'] = isset($dados['ativo']) ? $dados['ativo'] : 'n';
+        $dados['token'] = isset($dados['token']) ? $dados['token'] : uniqid();
+        $dados['autor'] = isset($dados['autor']) ? $dados['autor'] : Auth::id();
+        $dados['excluido'] = 'n';
+        $dados['deletado'] = 'n';
+
+        $salvar = Contrato::create($dados);
+        $route = $this->routa . '.index';
+        $ret = [
+            'mens' => $this->label . ' cadastrado com sucesso!',
+            'color' => 'success',
+            'idCad' => $salvar->id,
+            'exec' => true,
+            'dados' => $dados,
+        ];
+
+        if ($ajax == 's') {
+            $ret['return'] = route($route) . '?idCad=' . $salvar->id;
+            $ret['redirect'] = route($this->routa . '.edit', ['contrato' => $salvar->id]);
+            return response()->json($ret);
+        } else {
+            return redirect()->route($route, $ret);
+        }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Contrato $contrato)
+    public function show($id)
     {
-        //
+        return redirect()->route($this->routa . '.edit', ['id' => $id]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Contrato $contrato)
+    /**
+     * Tela de edição do contrato.
+     */
+    public function edit($id)
     {
-        //
+        $this->authorize('ler', $this->routa);
+        $title = __('Editar contrato');
+        $titulo = $title;
+        $config = [
+            'ac' => 'alt',
+            'frm_id' => 'frm-contratos',
+            'route' => $this->routa,
+        ];
+        $contrato = Contrato::findOrFail($id);
+        $value = $contrato->toArray();
+        $campos = $this->campos($contrato->id);
+        return view($this->view . '.createedit', [
+            'config' => $config,
+            'title' => $title,
+            'titulo' => $titulo,
+            'campos' => $campos,
+            'value' => $value,
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Contrato $contrato)
+    /**
+     * Atualização do contrato.
+     */
+    public function update(Request $request, $id)
     {
-        //
+        $this->authorize('update', $this->routa);
+        $validatedData = $request->validate([
+            'id_cliente' => ['required'],
+            'id_produto' => ['required'],
+            'id_plano' => ['required'],
+            'inicio' => ['required', 'date'],
+            'fim' => ['required', 'date'],
+            'ativo' => ['nullable', 'in:s,n'],
+        ]);
+        $dados = $request->all();
+        $dados['ativo'] = isset($dados['ativo']) ? $dados['ativo'] : 'n';
+        $contrato = Contrato::findOrFail($id);
+        $contrato->update($dados);
+        $route = $this->routa . '.edit';
+        $ret = [
+            'mens' => $this->label . ' atualizado com sucesso!',
+            'color' => 'success',
+            'idCad' => $contrato->id,
+            'exec' => true,
+            'dados' => $dados,
+        ];
+        return redirect()->route($route, ['id' => $contrato->id] + $ret);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Contrato $contrato)
+    /**
+     * Remoção lógica de contrato.
+     */
+    public function destroy($id)
     {
-        //
+        $this->authorize('delete', $this->routa);
+        $contrato = Contrato::findOrFail($id);
+        $contrato->update([
+            'excluido' => 's',
+            'reg_excluido' => 'Removido em ' . date('Y-m-d H:i:s') . ' por ' . Auth::id(),
+        ]);
+        $route = $this->routa . '.index';
+        $ret = [
+            'mens' => $this->label . ' removido com sucesso!',
+            'color' => 'success',
+            'exec' => true,
+        ];
+        return redirect()->route($route, $ret);
     }
 }

@@ -275,6 +275,10 @@
                                                 $val = $getNested($metaArr ?? [], $p);
                                                 if (is_array($val)) { $parametros = $val; break; }
                                             }
+                                            $payload = null;
+                                            if (isset($metaArr['payload'])) {
+                                                $payload = $metaArr['payload'];
+                                            }
                                         @endphp
                                         @if(!is_null($metaArr))
                                             <div class="meta">
@@ -282,6 +286,33 @@
                                                     <p>{{ __('Mensagem') }}: <strong>{{ $mens }}</strong></p>
                                                 @elseif(!empty($retornoMsg))
                                                     <p>{{ __('Mensagem') }}: <strong>{{ $retornoMsg }}</strong></p>
+                                                @endif
+                                                @if(is_array($payload) && !empty($payload))
+                                                    <div class="table-responsive mb-2">
+                                                        <h6 class="text-muted">{{ __('Payload (Envio)') }}</h6>
+                                                        <table class="table table-sm table-striped">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width: 35%">{{ __('Campo') }}</th>
+                                                                    <th>{{ __('Valor') }}</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($payload as $pk => $pv)
+                                                                    <tr>
+                                                                        <td>{{ $pk }}</td>
+                                                                        <td>
+                                                                            @if(is_array($pv))
+                                                                                <code>{{ json_encode($pv, JSON_UNESCAPED_UNICODE) }}</code>
+                                                                            @else
+                                                                                {{ is_bool($pv) ? ($pv ? 'true' : 'false') : (string)$pv }}
+                                                                            @endif
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 @endif
                                                 @if(is_array($parametros) && !empty($parametros))
                                                     {{-- PT: Tabela de parâmetros quando presentes em response.data.parametros --}}

@@ -12,6 +12,9 @@ class Contrato extends Model
     protected $fillable = [
         'id_cliente',
         'id_produto',
+        'id_plano',
+        'inicio',
+        'fim',
         'config',
         'ativo',
         'autor',
@@ -19,7 +22,7 @@ class Contrato extends Model
         'excluido',
         'reg_excluido',
         'deletado',
-        'reg_excluido'
+        'reg_deletado'
     ];
 
     /**

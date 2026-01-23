@@ -133,11 +133,13 @@ class SulAmericaController extends Controller
         </soapenv:Envelope>
         ';
         // Log de início da contratação (start)
+        $payload = (is_object($config) && method_exists($config, 'all')) ? $config->all() : $config;
         ContractEventLogger::logByToken(
             $operacaoParceiro,
             'contratacao_start',
             'Início do processamento do método contratacao (SulAmérica)',
             [
+                'payload' => $payload,
                 'request' => [
                     'produto' => $produto,
                     'canalVenda' => $canalVenda,
