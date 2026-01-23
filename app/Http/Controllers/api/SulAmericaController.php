@@ -171,6 +171,7 @@ class SulAmericaController extends Controller
         $ret['body'] = $resposta;
         $ret = $this->xmlContrata_to_array($resposta,$config);
         $ret['url'] = $this->url;
+        $ret['produto'] = $produto;
 
         // Log de término da contratação (end)
         ContractEventLogger::logByToken(
