@@ -22,7 +22,7 @@ class SulAmericaController extends Controller
         $this->user = Qlib::qoption('user_api_sulamerica') ? Qlib::qoption('user_api_sulamerica') : "yello1232user";
         $this->pass = Qlib::qoption('pass_api_sulamerica') ? Qlib::qoption('pass_api_sulamerica') : "yello1232pass";
         $this->produtoParceiro = Qlib::qoption('produtoParceiro') ? Qlib::qoption('produtoParceiro') : "10232";
-        dd($this->url,$this->user,$this->pass,$this->produtoParceiro);
+        // dd($this->url,$this->user,$this->pass,$this->produtoParceiro);
     }
     /**
      * Metodo para ser chamado na api do ajax
