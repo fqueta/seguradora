@@ -52,7 +52,7 @@ class SulAmericaController extends Controller
      *  $ret = (new SulAmericaController)->cancelamento($config);
      */
     public function cancelar(Request $request){
-        $ret = $this->cancelamento($request);
+        $ret = $this->cancelamento($request->all());
         return $ret;
     }
     /**
@@ -196,9 +196,9 @@ class SulAmericaController extends Controller
     public function cancelamento($config){
         $numeroOperacao = isset($config['numeroOperacao']) ? $config['numeroOperacao'] : false;
         $canalVenda = isset($config['canalVenda']) ? $config['canalVenda'] : 'site';
-        $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : date('m/Y');
+        $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : date('mY');
         $token_contrato = isset($config['token_contrato']) ? $config['token_contrato'] : '';
-        // dd($token_contrato);
+        // dd($config);
         if(!$numeroOperacao){
             $ret['exec'] = false;
             $ret['mens'] = 'Número de operação é obrigatório';
@@ -257,15 +257,16 @@ class SulAmericaController extends Controller
 
         $ret['url'] = $this->url;
         $resposta = $response->body();
-        // $ret['requsição'] = $xml;
+        $ret['requisicao'] = $xml;
         // $ret['passwordDigest'] = $passwordDigest;
         $ret['body'] = $resposta;
+        // dd($ret);
         $ret = $this->xmlCancela_to_array($resposta,$config);
         if(isset($ret['exec']) && !empty($token_contrato)){
             //Atualizar o status do contrato
             (new ContratoController)->status_update($token_contrato,'Cancelado',$ret);
         }
-        $ret['xml'] = $xml;
+        // $ret['xml'] = $xml;
         if(!empty($token_contrato)){
             // Log de término do cancelamento (end)
             ContractEventLogger::logByToken(
