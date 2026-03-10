@@ -196,7 +196,7 @@ class SulAmericaController extends Controller
     public function cancelamento($config){
         $numeroOperacao = isset($config['numeroOperacao']) ? $config['numeroOperacao'] : false;
         $canalVenda = isset($config['canalVenda']) ? $config['canalVenda'] : 'site';
-        $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : '032025';
+        $mesAnoFatura = isset($config['mesAnoFatura']) ? $config['mesAnoFatura'] : date('m/Y');
         $token_contrato = isset($config['token_contrato']) ? $config['token_contrato'] : '';
         // dd($token_contrato);
         if(!$numeroOperacao){
@@ -265,6 +265,7 @@ class SulAmericaController extends Controller
             //Atualizar o status do contrato
             (new ContratoController)->status_update($token_contrato,'Cancelado',$ret);
         }
+        $ret['xml'] = $xml;
         if(!empty($token_contrato)){
             // Log de término do cancelamento (end)
             ContractEventLogger::logByToken(
