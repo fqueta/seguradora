@@ -266,7 +266,8 @@ class SulAmericaController extends Controller
             //Atualizar o status do contrato
             (new ContratoController)->status_update($token_contrato,'Cancelado',$ret);
         }
-        // $ret['xml'] = $xml;
+        $ret['xml'] = $xml;
+        $ret['url'] = $this->url;
         if(!empty($token_contrato)){
             // Log de término do cancelamento (end)
             ContractEventLogger::logByToken(
