@@ -18,7 +18,7 @@ class SulAmericaController extends Controller
     public function __construct()
     {
         // $this->url = "https://services.sulamerica.com.br/saude/autorizacao"; // URL do WebService da SulAmérica
-        $this->url = Qlib::qoption('url_api_sulamerica') ? Qlib::qoption('url_api_sulamerica') : "https://canalvenda-internet-develop.executivoslab.com.br/services/canalvenda?wsdl"; // URL do WebService da SulAmérica
+        $this->url = Qlib::qoption('url_api_sulamerica') ? Qlib::qoption('url_api_sulamerica') : "https://canalvenda-internet.paas.sulamerica.com.br/services/canalvenda?wsdl"; // URL do WebService da SulAmérica
         $this->user = Qlib::qoption('user_api_sulamerica') ? Qlib::qoption('user_api_sulamerica') : "yello1232user";
         $this->pass = Qlib::qoption('pass_api_sulamerica') ? Qlib::qoption('pass_api_sulamerica') : "yello1232pass";
         $this->produtoParceiro = Qlib::qoption('produtoParceiro') ? Qlib::qoption('produtoParceiro') : "10232";
