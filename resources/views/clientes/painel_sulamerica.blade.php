@@ -33,6 +33,11 @@
             </div>
 
         @endif
+        <div class="col-md-12 text-right">
+                <button type="button" title="{{__('Cantelar o contrato na sulamerica')}}" data-operacao="{{$numOperacao}}" onclick="cancelarSulamerica('{{$token}}','{{$id}}',this)" class="btn btn-outline-danger">
+                   <i class="fa fa-ban"></i> {{__('Cancelar novamente')}}
+                </button>
+         </div>
     @elseif($status_local == 'Aprovado' || $status_local == 'aprovado')
         @if ($dados)
 
