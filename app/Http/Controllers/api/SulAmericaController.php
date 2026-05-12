@@ -260,8 +260,8 @@ class SulAmericaController extends Controller
         $ret['requisicao'] = $xml;
         // $ret['passwordDigest'] = $passwordDigest;
         $ret['body'] = $resposta;
-        // dd($ret);
         $ret = $this->xmlCancela_to_array($resposta,$config);
+        // dd($ret);
         if(isset($ret['exec']) && !empty($token_contrato)){
             //Atualizar o status do contrato
             (new ContratoController)->status_update($token_contrato,'Cancelado',$ret);
@@ -348,6 +348,7 @@ class SulAmericaController extends Controller
         $ret['exec'] = false;
         $ret['data'] = [];
         $ret['mens'] = '';
+        $ret['confirmarCancelamento'] = $confirmarCancelamento;
         $ret['color'] = 'danger';
         if(Qlib::isAdmin(1)){
             $ret['dados'] = $dados;
@@ -366,7 +367,7 @@ class SulAmericaController extends Controller
 
             // Passo 7: Converter para array associativo
             $array = json_decode(json_encode($innerXmlObject), true);
-
+            $ret['dados_retorno_api'] = $array;
             // Exibir resultado
             if(isset($array['retorno']) && $array['retorno']=='0'){
                 $ret['exec'] = true;
